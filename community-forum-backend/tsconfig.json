@@ -3,7 +3,7 @@
     "target": "es2018",
     "module": "commonjs",
     "esModuleInterop": true,
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
@@ -11,14 +11,10 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
     "paths": {
       "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "api"]
 }

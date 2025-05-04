@@ -12,7 +12,6 @@ interface DecodedToken {
     exp: number;
 }
 
-// Extend the Express Request type
 export interface AuthRequest extends Request {
     user?: {
         id: string;
@@ -42,7 +41,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         // Add user info to request
         req.user = {
             id: decoded.id,
-            role: decoded.role || user.role,
+            role: decoded.role,
         };
 
         next();
