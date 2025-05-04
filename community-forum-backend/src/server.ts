@@ -1,4 +1,4 @@
-// src/server.ts (updated with Swagger integration)
+// src/server.ts (Fixed for Swagger UI access)
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -12,17 +12,24 @@ import swaggerSpec from './config/swagger';
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(helmet());
+// Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Swagger documentation
+// Configure CORS to allow Swagger UI
+app.use(cors());
+
+// Configure Helmet with exceptions for Swagger
+app.use(
+    helmet({
+        contentSecurityPolicy: false, // This is important for Swagger UI to work
+    })
+);
+
+// Swagger documentation - place BEFORE API routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Community Forum API Documentation',
 }));
 
@@ -32,7 +39,7 @@ app.get('/swagger.json', (req, res) => {
     res.send(swaggerSpec);
 });
 
-// Routes
+// API Routes
 app.use('/api/v1', routes);
 
 // Error handling

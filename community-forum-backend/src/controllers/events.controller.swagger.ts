@@ -1,17 +1,17 @@
-// src/routes/events.routes.ts
-import { Router } from 'express';
-import * as eventsController from '../controllers/events.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
-import { validate } from '../middlewares/validate.middleware';
-import { createEventSchema, updateEventSchema } from '../validators/events.validator';
+// src/controllers/events.controller.swagger.ts
 
-const router = Router();
+/**
+ * @swagger
+ * tags:
+ *   name: Events
+ *   description: Community events management
+ */
 
 /**
  * @swagger
  * /events:
  *   get:
- *     summary: Get all events with optional filters
+ *     summary: Get all events
  *     tags: [Events]
  *     parameters:
  *       - in: query
@@ -34,16 +34,16 @@ const router = Router();
  *         schema:
  *           type: string
  *           format: date-time
- *         description: Filter for events starting after this date
+ *         description: Filter events starting after this date
  *       - in: query
  *         name: startBefore
  *         schema:
  *           type: string
  *           format: date-time
- *         description: Filter for events starting before this date
+ *         description: Filter events starting before this date
  *     responses:
  *       200:
- *         description: Events retrieved successfully
+ *         description: Successfully retrieved events
  *         content:
  *           application/json:
  *             schema:
@@ -59,50 +59,13 @@ const router = Router();
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Event'
- */
-router.get('/', eventsController.getEvents);
-
-/**
- * @swagger
- * /events/{id}:
- *   get:
- *     summary: Get event by ID
- *     tags: [Events]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Event ID
- *     responses:
- *       200:
- *         description: Event retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Event retrieved successfully
- *                 data:
- *                   $ref: '#/components/schemas/Event'
- *       404:
- *         description: Event not found
+ *       500:
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- */
-router.get('/:id', eventsController.getEventById);
-
-/**
- * @swagger
- * /events:
+ *
  *   post:
  *     summary: Create a new event
  *     tags: [Events]
@@ -123,38 +86,53 @@ router.get('/:id', eventsController.getEventById);
  *             properties:
  *               title:
  *                 type: string
+ *                 description: Event title
  *               description:
  *                 type: string
+ *                 description: Event description
  *               startDate:
  *                 type: string
  *                 format: date-time
+ *                 description: Event start date and time
  *               endDate:
  *                 type: string
  *                 format: date-time
+ *                 description: Event end date and time
  *               location:
  *                 type: string
+ *                 description: Event location
  *               address:
  *                 type: string
+ *                 description: Event address
  *               isOnline:
  *                 type: boolean
+ *                 description: Whether the event is online
  *               meetingUrl:
  *                 type: string
+ *                 description: URL for online meeting
  *               capacity:
  *                 type: integer
+ *                 description: Maximum attendees capacity
  *               isFree:
  *                 type: boolean
+ *                 description: Whether the event is free
  *               price:
  *                 type: number
+ *                 description: Event price (required if isFree is false)
  *               image:
  *                 type: string
+ *                 description: Event image URL
  *               categoryId:
  *                 type: string
+ *                 description: Category ID
  *               neighborhoodId:
  *                 type: string
+ *                 description: Neighborhood ID
  *               interestIds:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Array of interest IDs
  *     responses:
  *       201:
  *         description: Event created successfully
@@ -172,7 +150,7 @@ router.get('/:id', eventsController.getEventById);
  *                 data:
  *                   $ref: '#/components/schemas/Event'
  *       400:
- *         description: Invalid input data
+ *         description: Bad request
  *         content:
  *           application/json:
  *             schema:
@@ -184,17 +162,61 @@ router.get('/:id', eventsController.getEventById);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Forbidden - Insufficient permissions
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', authenticate, authorize(['ADMIN', 'MODERATOR', 'SUPER_ADMIN']), validate(createEventSchema), eventsController.createEvent);
 
 /**
  * @swagger
  * /events/{id}:
+ *   get:
+ *     summary: Get a specific event by ID
+ *     tags: [Events]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved event
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Event retrieved successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *       404:
+ *         description: Event not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *
  *   put:
  *     summary: Update an event
  *     tags: [Events]
@@ -267,7 +289,7 @@ router.post('/', authenticate, authorize(['ADMIN', 'MODERATOR', 'SUPER_ADMIN']),
  *                 data:
  *                   $ref: '#/components/schemas/Event'
  *       400:
- *         description: Invalid input data
+ *         description: Bad request
  *         content:
  *           application/json:
  *             schema:
@@ -279,7 +301,7 @@ router.post('/', authenticate, authorize(['ADMIN', 'MODERATOR', 'SUPER_ADMIN']),
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Forbidden - Insufficient permissions
+ *         description: Forbidden - Not the creator or admin
  *         content:
  *           application/json:
  *             schema:
@@ -290,12 +312,13 @@ router.post('/', authenticate, authorize(['ADMIN', 'MODERATOR', 'SUPER_ADMIN']),
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- */
-router.put('/:id', authenticate, validate(updateEventSchema), eventsController.updateEvent);
-
-/**
- * @swagger
- * /events/{id}:
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *
  *   delete:
  *     summary: Delete an event
  *     tags: [Events]
@@ -329,7 +352,7 @@ router.put('/:id', authenticate, validate(updateEventSchema), eventsController.u
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Forbidden - Insufficient permissions
+ *         description: Forbidden - Not the creator or admin
  *         content:
  *           application/json:
  *             schema:
@@ -340,8 +363,13 @@ router.put('/:id', authenticate, validate(updateEventSchema), eventsController.u
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', authenticate, eventsController.deleteEvent);
 
 /**
  * @swagger
@@ -379,7 +407,7 @@ router.delete('/:id', authenticate, eventsController.deleteEvent);
  *                       type: string
  *                     status:
  *                       type: string
- *                       enum: [REGISTERED, WAITLISTED]
+ *                       enum: [REGISTERED, WAITLISTED, CANCELED, ATTENDED]
  *       401:
  *         description: Unauthorized
  *         content:
@@ -392,12 +420,13 @@ router.delete('/:id', authenticate, eventsController.deleteEvent);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- */
-router.post('/:id/register', authenticate, eventsController.registerForEvent);
-
-/**
- * @swagger
- * /events/{id}/register:
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *
  *   delete:
  *     summary: Cancel event registration
  *     tags: [Events]
@@ -436,7 +465,10 @@ router.post('/:id/register', authenticate, eventsController.registerForEvent);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id/register', authenticate, eventsController.cancelEventRegistration);
-
-export default router;
