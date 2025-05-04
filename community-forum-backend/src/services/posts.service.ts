@@ -243,12 +243,11 @@ export const getPostById = async (id: string) => {
 export const createPost = async (data: CreatePostInput, authorId: string) => {
     const { tagIds, media, ...postData } = data;
 
+    // Fix for createPost function
     return prisma.post.create({
         data: {
             ...postData,
-            author: {
-                connect: { id: authorId },
-            },
+            authorId: authorId,
             ...(tagIds && tagIds.length > 0
                 ? {
                     tags: {
@@ -550,15 +549,27 @@ export const deleteComment = async (id: string) => {
 /**
  * Add a reaction to a post
  */
+// Fix the type issue with the reaction type
 export const addReaction = async (data: ReactionInput) => {
     const { postId, userId, type } = data;
+
+    // Define a mapping from your API types to Prisma's enum types
+    const reactionTypeMap: Record<string, any> = {
+        'LIKE': 'LIKE',
+        'LOVE': 'LOVE',
+        'HAHA': 'HAHA',
+        'WOW': 'WOW',
+        'SAD': 'SAD',
+        'ANGRY': 'ANGRY',
+        'USEFUL': 'USEFUL'
+    };
 
     // Check if the user has already reacted with this type
     const existingReaction = await prisma.reaction.findFirst({
         where: {
             postId,
             userId,
-            type,
+            type: reactionTypeMap[type],
         },
     });
 
@@ -568,17 +579,12 @@ export const addReaction = async (data: ReactionInput) => {
 
     return prisma.reaction.create({
         data: {
-            type,
-            user: {
-                connect: { id: userId },
-            },
-            post: {
-                connect: { id: postId },
-            },
+            type: reactionTypeMap[type],
+            userId,
+            postId,
         },
     });
 };
-
 /**
  * Remove a reaction from a post
  */
@@ -902,13 +908,12 @@ export const getRelatedPosts = async (postId: string, limit = 3) => {
 export const saveDraft = async (data: CreatePostInput, authorId: string) => {
     const { tagIds, media, ...postData } = data;
 
+    // Use Prisma's unchecked create input type
     return prisma.post.create({
         data: {
             ...postData,
+            authorId, // Use authorId directly instead of a connect object
             status: 'DRAFT',
-            author: {
-                connect: { id: authorId },
-            },
             ...(tagIds && tagIds.length > 0
                 ? {
                     tags: {
@@ -991,6 +996,7 @@ export const archivePost = async (id: string) => {
 /**
  * Get all posts for moderation (admin only)
  */
+// Fix the issues with the Report queries
 export const getPostsForModeration = async (page = 1, limit = 20) => {
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -1013,22 +1019,7 @@ export const getPostsForModeration = async (page = 1, limit = 20) => {
                         },
                     },
                 },
-                post: {
-                    include: {
-                        author: {
-                            select: {
-                                id: true,
-                                profile: {
-                                    select: {
-                                        displayName: true,
-                                        avatar: true,
-                                    },
-                                },
-                            },
-                        },
-                        category: true,
-                    },
-                },
+                // Remove the post include since it's not in your schema
             },
             orderBy: {
                 createdAt: 'desc',
@@ -1044,8 +1035,45 @@ export const getPostsForModeration = async (page = 1, limit = 20) => {
         }),
     ]);
 
+    // Fetch posts separately
+    const postIds = reports
+        .filter(report => report.postId !== null)
+        .map(report => report.postId as string);
+
+    const posts = await prisma.post.findMany({
+        where: {
+            id: { in: postIds },
+        },
+        include: {
+            author: {
+                select: {
+                    id: true,
+                    profile: {
+                        select: {
+                            displayName: true,
+                            avatar: true,
+                        },
+                    },
+                },
+            },
+            category: true,
+        },
+    });
+
+    // Create a map for quick post lookup
+    const postMap = posts.reduce((map, post) => {
+        map[post.id] = post;
+        return map;
+    }, {} as Record<string, any>);
+
+    // Merge posts with reports
+    const reportsWithPosts = reports.map(report => ({
+        ...report,
+        post: report.postId ? postMap[report.postId] : null
+    }));
+
     return {
-        reports,
+        reports: reportsWithPosts,
         pagination: {
             page,
             limit,
@@ -1063,13 +1091,20 @@ export const resolvePostReport = async (reportId: string, action: 'APPROVE' | 'R
     // Get the report and associated post
     const report = await prisma.report.findUnique({
         where: { id: reportId },
-        include: {
-            post: true,
-        },
+        // Remove the post include
     });
 
     if (!report || !report.postId) {
         throw new Error('Report not found or not associated with a post');
+    }
+
+    // Fetch the post separately
+    const post = await prisma.post.findUnique({
+        where: { id: report.postId },
+    });
+
+    if (!post) {
+        throw new Error('Associated post not found');
     }
 
     // Perform the appropriate action

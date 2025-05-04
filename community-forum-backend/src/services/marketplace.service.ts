@@ -149,12 +149,11 @@ export const getListingById = async (id: string) => {
 export const createListing = async (data: CreateMarketListingInput, sellerId: string) => {
     const { tagIds, ...listingData } = data;
 
+    // Fix for createListing function
     return prisma.marketListing.create({
         data: {
             ...listingData,
-            seller: {
-                connect: { id: sellerId },
-            },
+            sellerId: sellerId,
             ...(tagIds && tagIds.length > 0
                 ? {
                     tags: {

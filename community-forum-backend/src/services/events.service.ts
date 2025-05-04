@@ -120,15 +120,14 @@ export const getEventById = async (id: string) => {
     return event;
 };
 
+// Fix for createEvent function
 export const createEvent = async (data: CreateEventInput, creatorId: string) => {
     const { interestIds, ...eventData } = data;
 
     return prisma.event.create({
         data: {
             ...eventData,
-            creator: {
-                connect: { id: creatorId },
-            },
+            creatorId,
             ...(interestIds && interestIds.length > 0
                 ? {
                     interests: {

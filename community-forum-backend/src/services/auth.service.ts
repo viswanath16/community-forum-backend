@@ -1,9 +1,10 @@
 // src/services/auth.service.ts
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { environment } from '../config/environment';
 import prisma from '../prisma/client';
+import jwt, { Secret } from 'jsonwebtoken';
+
 
 interface RegisterInput {
     email: string;
@@ -96,10 +97,11 @@ export const login = async (email: string, password: string) => {
 /**
  * Generate JWT token
  */
+// Fix
 export const generateToken = (userId: string) => {
     return jwt.sign(
         { id: userId },
-        environment.JWT_SECRET,
+        environment.JWT_SECRET as string,
         { expiresIn: environment.JWT_EXPIRES_IN }
     );
 };
