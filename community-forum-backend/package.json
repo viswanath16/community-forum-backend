@@ -1,18 +1,19 @@
 {
   "name": "community-forum-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Community Forum API",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "test": "jest"
+    "test": "jest",
+    "vercel-build": "prisma generate && prisma migrate deploy && tsc"
   },
   "keywords": [],
   "author": "",

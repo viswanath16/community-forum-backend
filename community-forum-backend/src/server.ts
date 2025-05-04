@@ -1,4 +1,4 @@
-// src/server.ts (Fixed for Swagger UI access)
+// src/server.ts (Vercel optimized version)
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,9 +15,13 @@ const app = express();
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
 
-// Configure CORS to allow Swagger UI
+// Use morgan only in development
+if (environment.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+}
+
+// Configure CORS to allow Swagger UI and frontend
 app.use(cors());
 
 // Configure Helmet with exceptions for Swagger
@@ -26,6 +30,11 @@ app.use(
         contentSecurityPolicy: false, // This is important for Swagger UI to work
     })
 );
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', environment: environment.NODE_ENV });
+});
 
 // Swagger documentation - place BEFORE API routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -46,11 +55,14 @@ app.use('/api/v1', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Start server
-const PORT = environment.PORT;
-app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
-    logger.info(`API Documentation available at http://localhost:${PORT}/api-docs`);
-});
+// Start server if not in production (for local development)
+if (environment.NODE_ENV !== 'production') {
+    const PORT = environment.PORT;
+    app.listen(PORT, () => {
+        logger.info(`Server running on port ${PORT}`);
+        logger.info(`API Documentation available at http://localhost:${PORT}/api-docs`);
+    });
+}
 
+// Export for Vercel
 export default app;
