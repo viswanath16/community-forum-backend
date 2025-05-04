@@ -1,5 +1,5 @@
-// src/server.ts (Vercel optimized version)
-import express from 'express';
+// src/server.ts (fixed for Vercel serverless functions)
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -21,7 +21,7 @@ if (environment.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Configure CORS to allow Swagger UI and frontend
+// Configure CORS to allow all origins
 app.use(cors());
 
 // Configure Helmet with exceptions for Swagger
@@ -32,7 +32,7 @@ app.use(
 );
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: 'ok', environment: environment.NODE_ENV });
 });
 
@@ -43,7 +43,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // Swagger JSON endpoint
-app.get('/swagger.json', (req, res) => {
+app.get('/swagger.json', (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
 });
@@ -55,9 +55,9 @@ app.use('/api/v1', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Start server if not in production (for local development)
-if (environment.NODE_ENV !== 'production') {
-    const PORT = environment.PORT;
+// Start server if not in production/Vercel (for local development)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const PORT = environment.PORT || 5000;
     app.listen(PORT, () => {
         logger.info(`Server running on port ${PORT}`);
         logger.info(`API Documentation available at http://localhost:${PORT}/api-docs`);

@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "Community Forum API",
   "main": "dist/server.js",
+  "engines": {
+    "node": ">=18.x"
+  },
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts",
@@ -13,7 +16,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "test": "jest",
-    "vercel-build": "prisma generate && prisma migrate deploy && tsc"
+    "vercel-build": "npm run prisma:generate && tsc"
   },
   "keywords": [],
   "author": "",
