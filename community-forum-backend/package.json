@@ -16,7 +16,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "test": "jest",
-    "vercel-build": "npm install --save-dev @types/node @types/express @types/cors @types/morgan @types/jsonwebtoken @types/bcryptjs @types/swagger-jsdoc @types/swagger-ui-express && prisma generate && tsc"
+    "vercel-build": "prisma generate && tsc"
   },
   "keywords": [],
   "author": "",
