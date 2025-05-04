@@ -1,0 +1,509 @@
+// This is the updated Prisma schema with the missing relation field fixed
+// The issue was in the MarketRequest model - the buyer relation needed a corresponding field in the User model
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Using Supabase Auth (auth.users table)
+// This model is a reference to the Supabase Auth users table
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Profile information
+  profile       Profile?
+
+  // Relations
+  events         EventAttendee[]
+  createdEvents  Event[]        @relation("EventCreator")
+  marketListings MarketListing[]
+  posts          Post[]
+  comments       Comment[]
+  reactions      Reaction[]
+  messages       MessageSent[]   @relation("MessageSender")
+  receivedMessages MessageSent[] @relation("MessageReceiver")
+  notifications  Notification[]
+  reports        Report[]        @relation("ReportCreator")
+  reportedItems  Report[]        @relation("ReportedUser")
+  // Add the missing relation field for MarketRequest
+  buyerRequests  MarketRequest[] @relation("MarketRequestBuyer")
+
+  // Role-based access control
+  role           Role           @default(USER)
+
+  @@map("users") // Maps to Supabase auth.users table
+}
+
+model Profile {
+  id            String         @id @default(uuid())
+  userId        String         @unique @map("user_id")
+  firstName     String?        @map("first_name")
+  lastName      String?        @map("last_name")
+  displayName   String         @map("display_name")
+  bio           String?
+  avatar        String?
+  phoneNumber   String?        @map("phone_number")
+  address       String?
+  postalCode    String?        @map("postal_code")
+  city          String?
+  neighborhood  String?
+  isVerified    Boolean        @default(false) @map("is_verified")
+  verifiedAt    DateTime?      @map("verified_at")
+  trustScore    Int            @default(0) @map("trust_score")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests     Interest[]
+
+  @@map("profiles")
+}
+
+model Interest {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  profiles      Profile[]
+  events        Event[]
+
+  @@map("interests")
+}
+
+model Neighborhood {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  city          String
+  description   String?
+  postalCodes   String[]       @map("postal_codes")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  events        Event[]
+  resources     Resource[]
+
+  @@map("neighborhoods")
+}
+
+// Events Module
+model Event {
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  startDate     DateTime       @map("start_date")
+  endDate       DateTime       @map("end_date")
+  location      String?
+  address       String?
+  isOnline      Boolean        @default(false) @map("is_online")
+  meetingUrl    String?        @map("meeting_url")
+  capacity      Int?
+  isFree        Boolean        @default(true) @map("is_free")
+  price         Decimal?       @db.Decimal(10, 2)
+  image         String?
+  isPublished   Boolean        @default(false) @map("is_published")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  creatorId     String         @map("creator_id")
+  neighborhoodId String?       @map("neighborhood_id")
+  categoryId    String         @map("category_id")
+
+  // Relations
+  creator       User           @relation("EventCreator", fields: [creatorId], references: [id])
+  neighborhood  Neighborhood?  @relation(fields: [neighborhoodId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  attendees     EventAttendee[]
+  interests     Interest[]
+
+  @@map("events")
+}
+
+model EventAttendee {
+  id            String         @id @default(uuid())
+  status        AttendeeStatus @default(REGISTERED)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  eventId       String         @map("event_id")
+  userId        String         @map("user_id")
+
+  // Relations
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_attendees")
+}
+
+// Marketplace Module
+model MarketListing {
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  price         Decimal?       @db.Decimal(10, 2)
+  isFree        Boolean        @default(false) @map("is_free")
+  condition     Condition?
+  images        String[]
+  status        ListingStatus  @default(ACTIVE)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  sellerId      String         @map("seller_id")
+  categoryId    String         @map("category_id")
+  neighborhoodId String?       @map("neighborhood_id")
+
+  // Relations
+  seller        User           @relation(fields: [sellerId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  requests      MarketRequest[]
+  tags          Tag[]
+
+  @@map("market_listings")
+}
+
+model MarketRequest {
+  id            String         @id @default(uuid())
+  message       String?
+  status        RequestStatus  @default(PENDING)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  listingId     String         @map("listing_id")
+  buyerId       String         @map("buyer_id")
+
+  // Relations
+  listing       MarketListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer         User           @relation("MarketRequestBuyer", fields: [buyerId], references: [id])
+
+  @@map("market_requests")
+}
+
+// Community Posts Module
+model Post {
+  id            String         @id @default(uuid())
+  title         String
+  content       String
+  isAnonymous   Boolean        @default(false) @map("is_anonymous")
+  isPinned      Boolean        @default(false) @map("is_pinned")
+  status        PostStatus     @default(PUBLISHED)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  authorId      String         @map("author_id")
+  categoryId    String         @map("category_id")
+
+  // Relations
+  author        User           @relation(fields: [authorId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  comments      Comment[]
+  reactions     Reaction[]
+  tags          Tag[]
+  media         Media[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id            String         @id @default(uuid())
+  content       String
+  isAnonymous   Boolean        @default(false) @map("is_anonymous")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  authorId      String         @map("author_id")
+  postId        String         @map("post_id")
+  parentId      String?        @map("parent_id")
+
+  // Relations
+  author        User           @relation(fields: [authorId], references: [id])
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       Comment[]      @relation("CommentReplies")
+  reactions     Reaction[]
+
+  @@map("comments")
+}
+
+model Media {
+  id            String         @id @default(uuid())
+  url           String
+  type          MediaType
+  title         String?
+  description   String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Foreign Keys
+  postId        String?        @map("post_id")
+  resourceId    String?        @map("resource_id")
+
+  // Relations
+  post          Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  resource      Resource?      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@map("media")
+}
+
+// Categories and Tags
+model Category {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  description   String?
+  icon          String?
+  type          CategoryType
+  parentId      String?        @map("parent_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  parent        Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children      Category[]     @relation("CategoryHierarchy")
+  events        Event[]
+  marketListings MarketListing[]
+  posts         Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  posts         Post[]
+  marketListings MarketListing[]
+
+  @@map("tags")
+}
+
+// Community Resources
+model Resource {
+  id            String         @id @default(uuid())
+  title         String
+  content       String
+  type          ResourceType
+  url           String?
+  isPublished   Boolean        @default(true) @map("is_published")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  neighborhoodId String?       @map("neighborhood_id")
+
+  // Relations
+  neighborhood  Neighborhood?  @relation(fields: [neighborhoodId], references: [id])
+  media         Media[]
+
+  @@map("resources")
+}
+
+// Communication
+model Message {
+  id            String         @id @default(uuid())
+  content       String
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  sent          MessageSent[]
+
+  @@map("messages")
+}
+
+model MessageSent {
+  id            String         @id @default(uuid())
+  isRead        Boolean        @default(false) @map("is_read")
+  readAt        DateTime?      @map("read_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Foreign Keys
+  messageId     String         @map("message_id")
+  senderId      String         @map("sender_id")
+  receiverId    String         @map("receiver_id")
+
+  // Relations
+  message       Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sender        User           @relation("MessageSender", fields: [senderId], references: [id])
+  receiver      User           @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@map("messages_sent")
+}
+
+// Engagement
+model Reaction {
+  id            String         @id @default(uuid())
+  type          ReactionType
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Foreign Keys
+  userId        String         @map("user_id")
+  postId        String?        @map("post_id")
+  commentId     String?        @map("comment_id")
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post          Post?          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment       Comment?       @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, commentId, type])
+  @@map("reactions")
+}
+
+model Notification {
+  id            String         @id @default(uuid())
+  type          NotificationType
+  title         String
+  content       String
+  link          String?
+  isRead        Boolean        @default(false) @map("is_read")
+  readAt        DateTime?      @map("read_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Foreign Keys
+  userId        String         @map("user_id")
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Trust and Safety
+model Report {
+  id            String         @id @default(uuid())
+  type          ReportType
+  reason        String
+  description   String?
+  status        ReportStatus   @default(PENDING)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  resolvedAt    DateTime?      @map("resolved_at")
+
+  // Foreign Keys
+  reporterId    String         @map("reporter_id")
+  reportedUserId String?       @map("reported_user_id")
+  postId        String?        @map("post_id")
+  commentId     String?        @map("comment_id")
+  listingId     String?        @map("listing_id")
+
+  // Relations
+  reporter      User           @relation("ReportCreator", fields: [reporterId], references: [id])
+  reportedUser  User?          @relation("ReportedUser", fields: [reportedUserId], references: [id])
+
+  @@map("reports")
+}
+
+// Enums
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AttendeeStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELED
+  ATTENDED
+}
+
+enum Condition {
+  NEW
+  LIKE_NEW
+  GOOD
+  USED
+  WORN
+}
+
+enum ListingStatus {
+  ACTIVE
+  RESERVED
+  SOLD
+  CLOSED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  REMOVED
+}
+
+enum CategoryType {
+  EVENT
+  MARKET
+  POST
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+}
+
+enum ResourceType {
+  INFORMATION
+  CONTACT
+  GUIDE
+  DOCUMENT
+  FACILITY
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+  USEFUL
+}
+
+enum NotificationType {
+  EVENT
+  MARKET
+  POST
+  COMMENT
+  MESSAGE
+  SYSTEM
+}
+
+enum ReportType {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  VIOLENCE
+  SCAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
