@@ -589,11 +589,24 @@ export const addReaction = async (data: ReactionInput) => {
  * Remove a reaction from a post
  */
 export const removeReaction = async (postId: string, userId: string, type: string) => {
+
+    // Define a mapping from your API types to Prisma's enum types
+    const reactionTypeMap: Record<string, any> = {
+        'LIKE': 'LIKE',
+        'LOVE': 'LOVE',
+        'HAHA': 'HAHA',
+        'WOW': 'WOW',
+        'SAD': 'SAD',
+        'ANGRY': 'ANGRY',
+        'USEFUL': 'USEFUL'
+    };
+
+
     const reaction = await prisma.reaction.findFirst({
         where: {
             postId,
             userId,
-            type,
+            type: reactionTypeMap[type],
         },
     });
 
