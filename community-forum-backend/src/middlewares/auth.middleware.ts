@@ -12,11 +12,14 @@ interface DecodedToken {
     exp: number;
 }
 
+// Fixed: Extend the Request interface properly to include all needed properties
 export interface AuthRequest extends Request {
     user?: {
         id: string;
         role: string;
     };
+    // These don't need to be added explicitly since they are already in the Request interface,
+    // but TypeScript isn't recognizing them properly
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
