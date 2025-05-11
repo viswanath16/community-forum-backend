@@ -1,6 +1,9 @@
 // src/config/environment.ts
 import dotenv from 'dotenv';
 
+// Import node types explicitly
+import { env } from 'process';
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -13,11 +16,11 @@ export interface Environment {
 }
 
 export const environment: Environment = {
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    PORT: parseInt(process.env.PORT || '5000', 10),
-    JWT_SECRET: process.env.JWT_SECRET || 'default_jwt_secret',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d',
-    DATABASE_URL: process.env.DATABASE_URL || '',
+    NODE_ENV: env.NODE_ENV || 'development',
+    PORT: parseInt(env.PORT || '5000', 10),
+    JWT_SECRET: env.JWT_SECRET || 'default_jwt_secret',
+    JWT_EXPIRES_IN: env.JWT_EXPIRES_IN || '1d',
+    DATABASE_URL: env.DATABASE_URL || '',
 };
 
 // Validate required environment variables

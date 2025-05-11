@@ -1,4 +1,4 @@
-// src/server.ts (fixed for Vercel serverless functions)
+// src/server.ts (updated for Vercel)
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -56,7 +56,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server if not in production/Vercel (for local development)
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+if (environment.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const PORT = environment.PORT || 5000;
     app.listen(PORT, () => {
         logger.info(`Server running on port ${PORT}`);

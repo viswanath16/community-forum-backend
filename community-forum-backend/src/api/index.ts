@@ -1,13 +1,13 @@
-// api/index.js
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const { PrismaClient } = require('@prisma/client');
-const routes = require('../dist/routes').default;
-const { environment } = require('../dist/config/environment');
-const { errorHandler, notFoundHandler } = require('../dist/middlewares/error.middleware');
-const swaggerSpec = require('../dist/config/swagger').default;
-const swaggerUi = require('swagger-ui-express');
+// api/index.ts
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { PrismaClient } from '@prisma/client';
+import routes from '../routes';
+import { environment } from '../config/environment';
+import { errorHandler, notFoundHandler } from '../middlewares/error.middleware';
+import swaggerSpec from '../config/swagger';
+import swaggerUi from 'swagger-ui-express';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -41,5 +41,5 @@ app.use('/api/v1', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Handle Vercel serverless function
-module.exports = app;
+// Export for Vercel
+export default app;

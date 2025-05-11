@@ -1,26 +1,22 @@
-// src/prisma/client.ts - Optimized for Vercel's serverless environment
+// src/prisma/client.ts
 import { PrismaClient } from '@prisma/client';
-import { env } from 'process';
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-// Learn more: https://pris.ly/d/help/next-js-best-practices
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// Define a type for the global with prisma property
+declare global {
+    var prisma: PrismaClient | undefined;
+}
 
 // Determine log levels based on environment
-const logLevels = env.NODE_ENV === 'development'
+const logLevels = process.env.NODE_ENV === 'development'
     ? ['query', 'error', 'warn']
     : ['error'];
 
-// Initialize PrismaClient
-export const prisma =
-    globalForPrisma.prisma ||
-    new PrismaClient({
-        log: logLevels as any,
-    });
+// Initialize PrismaClient with the singleton pattern
+const prisma = global.prisma || new PrismaClient({
+    log: logLevels as any,
+});
 
 // Save PrismaClient to global object in non-production environments
-if (env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
 
 export default prisma;
