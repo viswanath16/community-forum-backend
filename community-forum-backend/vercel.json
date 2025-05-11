@@ -4,14 +4,14 @@
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "functions": {
-    "api/*.ts": {
-      "runtime": "nodejs18.x"
+    "api/*.js": {
+      "runtime": "@vercel/node@3.0.0"
     }
   },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.js"
     }
   ]
 }
