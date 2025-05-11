@@ -24,6 +24,7 @@ interface ProfileUpdateInput {
     avatar?: string;
 }
 
+
 /**
  * Generate JWT token
  */
