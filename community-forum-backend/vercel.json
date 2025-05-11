@@ -5,7 +5,7 @@
   "devCommand": "npm run dev",
   "functions": {
     "api/*.js": {
-      "runtime": "@vercel/node@3.0.29",
+      "runtime": "@vercel/node@3",
       "maxDuration": 30
     }
   },
