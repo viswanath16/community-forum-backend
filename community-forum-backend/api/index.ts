@@ -1,5 +1,5 @@
-// api/index.ts
-import app from '../dist/server';
+// api/index.js
+const app = require('../dist/server').default;
 
 // Export the app for Vercel
-export default app;
+module.exports = app;
