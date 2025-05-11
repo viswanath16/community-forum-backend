@@ -41,11 +41,28 @@ const transports = [
     new winston.transports.File({ filename: 'logs/all.log' }),
 ];
 
-const logger = winston.createLogger({
-    level: level(),
-    levels,
-    format,
-    transports,
-});
+
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Simple console logger for serverless environments
+const logger = {
+    error: (...args: any[]) => {
+        console.error(new Date().toISOString(), '[ERROR]', ...args);
+    },
+    warn: (...args: any[]) => {
+        console.warn(new Date().toISOString(), '[WARN]', ...args);
+    },
+    info: (...args: any[]) => {
+        console.log(new Date().toISOString(), '[INFO]', ...args);
+    },
+    http: (...args: any[]) => {
+        console.log(new Date().toISOString(), '[HTTP]', ...args);
+    },
+    debug: (...args: any[]) => {
+        if (isDevelopment) {
+            console.log(new Date().toISOString(), '[DEBUG]', ...args);
+        }
+    },
+};
 
 export default logger;
