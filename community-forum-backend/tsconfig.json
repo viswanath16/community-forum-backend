@@ -1,4 +1,3 @@
-// tsconfig.json (updated)
 {
   "compilerOptions": {
     "target": "es2018",
@@ -8,20 +7,14 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "./src",
     "sourceMap": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ],
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*",
-    "src/api/**/*"
-  ],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "api"]
 }
