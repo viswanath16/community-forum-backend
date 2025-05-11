@@ -1,4 +1,4 @@
-// src/services/auth.service.ts
+// src/services/auth.service.ts - Fixed JWT typing issue
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { environment } from '../config/environment';
@@ -33,13 +33,10 @@ export const generateToken = (userId: string, userRole: string = 'USER'): string
         role: userRole
     };
 
-    // Ensure environment.JWT_EXPIRES_IN is a string (it should be '1d', '7d', etc.)
-    const jwtSecret = environment.JWT_SECRET;
-    const jwtOptions = {
-        expiresIn: environment.JWT_EXPIRES_IN
-    };
-
-    return jwt.sign(payload, jwtSecret, jwtOptions);
+    // Fix: Cast the expiresIn properly
+    return jwt.sign(payload, environment.JWT_SECRET, {
+        expiresIn: environment.JWT_EXPIRES_IN as string | number
+    });
 };
 
 /**

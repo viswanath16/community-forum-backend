@@ -5,7 +5,8 @@
   "devCommand": "npm run dev",
   "functions": {
     "api/*.js": {
-      "runtime": "@vercel/node@3.0.0"
+      "runtime": "@vercel/node@3.0.29",
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -13,5 +14,10 @@
       "source": "/(.*)",
       "destination": "/api/index.js"
     }
-  ]
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "JWT_SECRET": "@jwt_secret",
+    "JWT_EXPIRES_IN": "@jwt_expires_in"
+  }
 }
