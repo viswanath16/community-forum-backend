@@ -1,7 +1,7 @@
 // src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import environment from '../config/environment';
+import { environment } from '../config/environment';
 import { error, StatusCode } from '../utils/responses';
 import prisma from '../prisma/client';
 
@@ -28,6 +28,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         }
 
         const token = authHeader.split(' ')[1];
+
+        // Verify the token
         const decoded = jwt.verify(token, environment.JWT_SECRET) as DecodedToken;
 
         // Check if user exists
@@ -41,12 +43,13 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
         // Add user info to request
         req.user = {
-            id: decoded.id,
-            role: decoded.role,
+            id: user.id,
+            role: user.role, // Use the role from the database
         };
 
         next();
     } catch (err) {
+        console.error('Authentication error:', err);
         return error(res, 'Invalid or expired token', null, StatusCode.UNAUTHORIZED);
     }
 };
