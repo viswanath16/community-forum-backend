@@ -16,7 +16,7 @@ export const environment: Environment = {
     NODE_ENV: process.env.NODE_ENV || 'development',
     PORT: parseInt(process.env.PORT || '5000', 10),
     JWT_SECRET: process.env.JWT_SECRET || 'your-default-secret-key',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d', // Ensure this returns a string
+    JWT_EXPIRES_IN: String(process.env.JWT_EXPIRES_IN || '1d'), // Explicitly convert to string
     DATABASE_URL: process.env.DATABASE_URL || '',
 };
 

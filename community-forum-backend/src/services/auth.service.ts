@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { environment } from '../config/environment';
 import prisma from '../prisma/client';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 interface RegisterInput {
     email: string;
@@ -33,11 +33,13 @@ export const generateToken = (userId: string, userRole: string = 'USER'): string
         role: userRole
     };
 
-    const options: SignOptions = {
-        expiresIn: environment.JWT_EXPIRES_IN || '1d'
+    // Ensure environment.JWT_EXPIRES_IN is a string (it should be '1d', '7d', etc.)
+    const jwtSecret = environment.JWT_SECRET;
+    const jwtOptions = {
+        expiresIn: environment.JWT_EXPIRES_IN
     };
 
-    return jwt.sign(payload, environment.JWT_SECRET, options);
+    return jwt.sign(payload, jwtSecret, jwtOptions);
 };
 
 /**
