@@ -12,6 +12,20 @@ export interface Environment {
     DATABASE_URL: string;
 }
 
+// Ensure process is available
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            NODE_ENV?: string;
+            PORT?: string;
+            JWT_SECRET?: string;
+            JWT_EXPIRES_IN?: string;
+            DATABASE_URL?: string;
+            VERCEL?: string;
+        }
+    }
+}
+
 export const environment: Environment = {
     NODE_ENV: process.env.NODE_ENV || 'development',
     PORT: parseInt(process.env.PORT || '5000', 10),

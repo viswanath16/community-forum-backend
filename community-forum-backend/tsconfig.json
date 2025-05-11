@@ -10,11 +10,15 @@
     "rootDir": "./src",
     "sourceMap": true,
     "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "lib": ["es2018"],
+    "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "api"]
+  "exclude": ["node_modules", "api", "dist"]
 }

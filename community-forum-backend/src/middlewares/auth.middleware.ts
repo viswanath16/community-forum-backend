@@ -12,6 +12,7 @@ interface DecodedToken {
     exp: number;
 }
 
+// Extend Request instead of creating a new interface
 export interface AuthRequest extends Request {
     user?: {
         id: string;

@@ -96,10 +96,9 @@ export const login = async (email: string, password: string) => {
 /**
  * Generate JWT token
  */
-export const generateToken = (userId: string) => {
-    // Type assertion to bypass type checking
-    return (jwt.sign as any)(
-        { id: userId },
+export const generateToken = (userId: string): string => {
+    return jwt.sign(
+        { id: userId, role: 'USER' }, // Add role to token
         environment.JWT_SECRET,
         { expiresIn: environment.JWT_EXPIRES_IN }
     );
