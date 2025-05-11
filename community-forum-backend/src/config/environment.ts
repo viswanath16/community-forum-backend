@@ -1,4 +1,4 @@
-// src/config/environment.ts - Fixed JWT_EXPIRES_IN typing
+// src/config/environment.ts - Final version with explicit types
 import dotenv from 'dotenv';
 
 // Load environment variables from .env file
@@ -8,7 +8,7 @@ export interface Environment {
     NODE_ENV: string;
     PORT: number;
     JWT_SECRET: string;
-    JWT_EXPIRES_IN: string | number; // Can be either string or number
+    JWT_EXPIRES_IN: string; // Explicitly string for JWT expiresIn
     DATABASE_URL: string;
 }
 
@@ -16,7 +16,7 @@ export const environment: Environment = {
     NODE_ENV: process.env.NODE_ENV || 'development',
     PORT: parseInt(process.env.PORT || '5000', 10),
     JWT_SECRET: process.env.JWT_SECRET || 'your-default-secret-key',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d', // Keep as string, can be '1d', '7d', etc.
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d', // This should be a valid JWT expiration string like '1d', '24h', '60s', etc.
     DATABASE_URL: process.env.DATABASE_URL || '',
 };
 
