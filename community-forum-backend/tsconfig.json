@@ -19,7 +19,9 @@
       "@/*": ["src/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"],
-    "types": ["node"]
+    "types": ["node"],
+    "noImplicitAny": false,
+    "strictNullChecks": false
   },
   "include": [
     "src/**/*.ts",

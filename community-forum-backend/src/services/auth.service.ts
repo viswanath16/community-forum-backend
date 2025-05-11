@@ -1,9 +1,9 @@
-// src/services/auth.service.ts - Final fix for JWT typing issue
+// src/services/auth.service.ts - Explicit type casting approach
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { environment } from '../config/environment';
 import prisma from '../prisma/client';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 interface RegisterInput {
     email: string;
@@ -24,7 +24,6 @@ interface ProfileUpdateInput {
     avatar?: string;
 }
 
-
 /**
  * Generate JWT token
  */
@@ -34,12 +33,10 @@ export const generateToken = (userId: string, userRole: string = 'USER'): string
         role: userRole
     };
 
-    // Fix: Define the SignOptions object with proper typing
-    const signOptions: SignOptions = {
-        expiresIn: environment.JWT_EXPIRES_IN
-    };
-
-    return jwt.sign(payload, environment.JWT_SECRET, signOptions);
+    // Explicitly cast the expiresIn value to avoid TypeScript issues
+    return jwt.sign(payload, environment.JWT_SECRET, {
+        expiresIn: environment.JWT_EXPIRES_IN as any
+    });
 };
 
 /**
