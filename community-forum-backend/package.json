@@ -4,7 +4,7 @@
   "description": "Community Forum API for Vercel Deployment",
   "main": "dist/server.js",
   "engines": {
-    "node": ">=18.x"
+    "node": "18.x"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -50,7 +50,7 @@
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
-    "@types/node": "^20.17.46",
+    "@types/node": "^18.19.26",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
