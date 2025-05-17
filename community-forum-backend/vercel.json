@@ -1,7 +1,6 @@
 {
   "version": 2,
   "buildCommand": "npm run vercel-build",
-  "framework": "node",
   "regions": ["iad1"],
   "installCommand": "npm install --include=dev",
   "builds": [
@@ -10,7 +9,6 @@
       "use": "@vercel/node"
     }
   ],
-
   "routes": [
     {
       "src": "/api/auth/(.*)",
