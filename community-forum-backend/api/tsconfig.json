@@ -1,3 +1,4 @@
+// api/tsconfig.json - TypeScript configuration for API routes
 {
   "compilerOptions": {
     "target": "ES2018",
@@ -6,20 +7,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "node",
-    "sourceMap": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["../src/*"]
-    }
+    "isolatedModules": true,
+    "strict": false,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["**/*.ts", "**/*.js"],
+  "exclude": ["node_modules"]
 }

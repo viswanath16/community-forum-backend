@@ -1,8 +1,32 @@
 {
   "version": 2,
   "buildCommand": "npm run vercel-build",
-  "outputDirectory": "dist",
+  "framework": "node",
+  "regions": ["iad1"],
+  "installCommand": "npm install --include=dev",
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
+    {
+      "src": "/api/auth/(.*)",
+      "dest": "/api/auth/[...route].ts"
+    },
+    {
+      "src": "/api/marketplace/(.*)",
+      "dest": "/api/marketplace/[...route].ts"
+    },
+    {
+      "src": "/api/posts/(.*)",
+      "dest": "/api/posts/[...route].ts"
+    },
+    {
+      "src": "/api/events/(.*)",
+      "dest": "/api/events/[...route].ts"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/api/index.ts"
@@ -14,6 +38,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "installCommand": "npm install --include=dev"
+  }
 }

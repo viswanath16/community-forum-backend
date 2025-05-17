@@ -2,13 +2,13 @@
   "name": "community-forum-api",
   "version": "1.0.0",
   "description": "Community Forum API for Vercel Deployment",
-  "main": "dist/server.js",
+  "main": "api/index.js",
   "engines": {
     "node": "18.x"
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc",
+    "build": "tsc -p src",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts",
@@ -19,7 +19,7 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "postinstall": "prisma generate",
     "test": "jest",
-    "vercel-build": "npm run prisma:generate && npm run build",
+    "vercel-build": "npm run prisma:generate",
     "vercel-dev": "vercel dev"
   },
   "keywords": ["community", "forum", "api", "vercel", "serverless"],
