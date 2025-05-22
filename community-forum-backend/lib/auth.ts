@@ -10,24 +10,18 @@ export interface JWTPayload {
     username: string
 }
 
-export function generateToken(payload: JWTPayload): string {
-    const secret = process.env.JWT_SECRET
-    if (!secret) {
-        throw new Error('JWT_SECRET environment variable is not set')
-    }
+// Ensure JWT_SECRET exists and is a string
+const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key-change-in-production'
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
-    return jwt.sign(payload, secret, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+export function generateToken(payload: JWTPayload): string {
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN
     })
 }
 
 export function verifyToken(token: string): JWTPayload {
-    const secret = process.env.JWT_SECRET
-    if (!secret) {
-        throw new Error('JWT_SECRET environment variable is not set')
-    }
-
-    return jwt.verify(token, secret) as JWTPayload
+    return jwt.verify(token, JWT_SECRET) as JWTPayload
 }
 
 export async function hashPassword(password: string): Promise<string> {
