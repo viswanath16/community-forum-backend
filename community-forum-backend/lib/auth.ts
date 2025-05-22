@@ -11,18 +11,17 @@ export interface JWTPayload {
 }
 
 // Ensure JWT_SECRET exists and is a string
-// Cast the JWT_SECRET to the correct type expected by jwt.sign
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key-change-in-production'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 export function generateToken(payload: JWTPayload): string {
-    return jwt.sign(payload, JWT_SECRET as jwt.Secret, {
-        expiresIn: JWT_EXPIRES_IN
+    // Use a number for expiresIn to avoid type issues
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: 60 * 60 * 24 * 7 // 7 days in seconds
     })
 }
 
 export function verifyToken(token: string): JWTPayload {
-    return jwt.verify(token, JWT_SECRET as jwt.Secret) as JWTPayload
+    return jwt.verify(token, JWT_SECRET) as JWTPayload
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -35,7 +34,10 @@ export async function comparePassword(password: string, hash: string): Promise<b
 
 export async function getAuthUser(request: NextRequest) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '')
+        const authHeader = request.headers.get('authorization')
+        if (!authHeader) return null
+
+        const token = authHeader.replace('Bearer ', '')
         if (!token) return null
 
         const payload = verifyToken(token)
@@ -53,14 +55,14 @@ export async function getAuthUser(request: NextRequest) {
     }
 }
 
-export function requireAuth(user: any) {
+export function requireAuth(user: any): any {
     if (!user) {
         throw new Error('Authentication required')
     }
     return user
 }
 
-export function requireAdmin(user: any) {
+export function requireAdmin(user: any): any {
     requireAuth(user)
     if (!user.isAdmin) {
         throw new Error('Admin access required')
