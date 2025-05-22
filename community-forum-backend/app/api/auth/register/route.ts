@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { registerSchema } from '@/lib/validations/auth'
-import { hashPassword, generateToken } from '@/lib/auth'
-import { successResponse, handleApiError } from '@/lib/utils/responses'
-import { handleApiError as errorHandler } from '@/lib/utils/error-handler'
+import { generateToken } from '@/lib/auth'
+import { successResponse, errorResponse } from '@/lib/utils/responses'
+import { handleApiError } from '@/lib/utils/error-handler'
 
 /**
  * @swagger
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
             return errorResponse('User with this email or username already exists', 409)
         }
 
-        // Hash password
-        const hashedPassword = await hashPassword(validatedData.password)
+        // Note: In production, you would integrate with Supabase Auth
+        // For demo purposes, we're creating the user in our database
 
         // Create user
         const user = await prisma.user.create({
@@ -73,8 +73,7 @@ export async function POST(request: NextRequest) {
                 username: validatedData.username,
                 fullName: validatedData.fullName,
                 neighborhoodId: validatedData.neighborhoodId,
-                // In real implementation, store hashed password
-                // For demo purposes, we're not storing it since we use Supabase Auth
+                // Password would be handled by Supabase Auth in production
             },
             select: {
                 id: true,
@@ -106,6 +105,6 @@ export async function POST(request: NextRequest) {
         }, 'User registered successfully', 201)
 
     } catch (error) {
-        return errorHandler(error)
+        return handleApiError(error)
     }
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { loginSchema } from '@/lib/validations/auth'
-import { comparePassword, generateToken } from '@/lib/auth'
+import { generateToken } from '@/lib/auth'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
 
@@ -37,8 +37,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const validatedData = loginSchema.parse(body)
 
-        // For demo purposes, we'll use a simple check
-        // In production, integrate with Supabase Auth
+        // Find user in database
         const user = await prisma.user.findUnique({
             where: { email: validatedData.email },
             include: {
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
             return errorResponse('Invalid email or password', 401)
         }
 
-        // Demo password check (replace with Supabase Auth)
+        // Demo password check (replace with Supabase Auth in production)
         const isValidPassword = validatedData.password === 'password123' ||
             (user.isAdmin && validatedData.password === process.env.ADMIN_PASSWORD)
 

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, requireAdmin } from '@/lib/auth'
 import { createEventSchema, eventQuerySchema } from '@/lib/validations/events'
-import { successResponse, paginatedResponse } from '@/lib/utils/responses'
+import {successResponse, paginatedResponse, errorResponse} from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
 
 /**
