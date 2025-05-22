@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("PRISMA_DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                      String   @id @default(uuid())
+  email                   String   @unique
+  username                String   @unique
+  fullName                String?
+  avatarUrl               String?
+  phone                   String?
+  neighborhoodId          String?
+  isVerified              Boolean  @default(false)
+  isAdmin                 Boolean  @default(false)
+  reputationScore         Int      @default(0)
+  privacySettings         Json?
+  notificationPreferences Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  lastActive              DateTime @default(now())
+
+  // Relations
+  neighborhood       Neighborhood?       @relation(fields: [neighborhoodId], references: [id])
+  events             Event[]
+  eventRegistrations EventRegistration[]
+
+  @@map("users")
+}
+
+model Neighborhood {
+  id                  String   @id @default(uuid())
+  name                String
+  city                String
+  postalCode          String
+  description         String?
+  boundaryCoordinates Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  users  User[]
+  events Event[]
+
+  @@map("neighborhoods")
+}
+
+model Event {
+  id                String        @id @default(uuid())
+  title             String
+  description       String
+  category          EventCategory
+  startDate         DateTime
+  endDate           DateTime?
+  location          String
+  coordinates       Json?
+  capacity          Int?
+  createdBy         String
+  neighborhoodId    String
+  isRecurring       Boolean       @default(false)
+  recurrencePattern Json?
+  status            EventStatus   @default(ACTIVE)
+  imageUrl          String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  creator       User                @relation(fields: [createdBy], references: [id])
+  neighborhood  Neighborhood        @relation(fields: [neighborhoodId], references: [id])
+  registrations EventRegistration[]
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id           String             @id @default(uuid())
+  eventId      String
+  userId       String
+  status       RegistrationStatus @default(REGISTERED)
+  registeredAt DateTime           @default(now())
+  notes        String?
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_registrations")
+}
+
+// Enums
+enum EventCategory {
+  SPORTS
+  CULTURAL
+  EDUCATIONAL
+  VOLUNTEER
+  SOCIAL
+  BUSINESS
+  HEALTH
+  ENVIRONMENT
+  TECHNOLOGY
+  OTHER
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+  DRAFT
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLIST
+  CANCELLED
+  ATTENDED
+}
