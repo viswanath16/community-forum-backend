@@ -1,7 +1,6 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-    // Remove any output configuration - let Next.js handle it automatically
     eslint: {
         ignoreDuringBuilds: true,
     },
@@ -33,6 +32,7 @@ const nextConfig: NextConfig = {
             },
         ]
     },
+    output: 'standalone'
 }
 
 export default nextConfig
