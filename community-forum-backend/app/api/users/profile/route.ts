@@ -20,8 +20,11 @@ import { handleApiError } from '@/lib/utils/error-handler'
  */
 export async function GET(request: NextRequest) {
     try {
-        const user = await getAuthUser(request)
-        requireAuth(user)
+        const authUser = await getAuthUser(request)
+        requireAuth(authUser)
+
+        // Type assertion after requireAuth check
+        const user = authUser!
 
         const userProfile = await prisma.user.findUnique({
             where: { id: user.id },
