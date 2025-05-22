@@ -1,12 +1,12 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-    output: 'standalone',
+    // Remove any output configuration - let Next.js handle it automatically
     eslint: {
         ignoreDuringBuilds: true,
     },
     typescript: {
-        ignoreBuildErrors: true, // Temporarily set to true to bypass type errors
+        ignoreBuildErrors: true, // Temporarily to bypass type errors
     },
     serverExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken'],
     images: {
@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
             'supabase.co',
             'localhost'
         ]
+    },
+    experimental: {
+        serverComponentsExternalPackages: ['@prisma/client']
     },
     env: {
         CUSTOM_KEY: process.env.CUSTOM_KEY,

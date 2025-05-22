@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         // Demo password check (replace with Supabase Auth in production)
         const isValidPassword = validatedData.password === 'password123' ||
-            (user.isAdmin && validatedData.password === process.env.ADMIN_PASSWORD)
+            (user.isAdmin && validatedData.password === (process.env.ADMIN_PASSWORD || 'admin123'))
 
         if (!isValidPassword) {
             return errorResponse('Invalid email or password', 401)
