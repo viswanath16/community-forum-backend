@@ -39,18 +39,20 @@ import { handleApiError } from '@/lib/utils/error-handler'
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getAuthUser(request)
         requireAuth(user)
+
+        const { id } = await context.params
 
         const body = await request.json().catch(() => ({}))
         const validatedData = eventRegistrationSchema.parse(body)
 
         // Check if event exists and is active
         const event = await prisma.event.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 _count: {
                     select: {
@@ -74,7 +76,7 @@ export async function POST(
         const existingRegistration = await prisma.eventRegistration.findUnique({
             where: {
                 eventId_userId: {
-                    eventId: params.id,
+                    eventId: id,
                     userId: user.id
                 }
             }
@@ -90,7 +92,7 @@ export async function POST(
 
         const registration = await prisma.eventRegistration.create({
             data: {
-                eventId: params.id,
+                eventId: id,
                 userId: user.id,
                 status: isAtCapacity ? 'WAITLIST' : 'REGISTERED',
                 notes: validatedData.notes
@@ -147,16 +149,18 @@ export async function POST(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getAuthUser(request)
         requireAuth(user)
 
+        const { id } = await context.params
+
         const registration = await prisma.eventRegistration.findUnique({
             where: {
                 eventId_userId: {
-                    eventId: params.id,
+                    eventId: id,
                     userId: user.id
                 }
             }
@@ -169,7 +173,7 @@ export async function DELETE(
         await prisma.eventRegistration.delete({
             where: {
                 eventId_userId: {
-                    eventId: params.id,
+                    eventId: id,
                     userId: user.id
                 }
             }
@@ -177,7 +181,7 @@ export async function DELETE(
 
         // Move someone from waitlist to registered if there's capacity
         const event = await prisma.event.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 _count: {
                     select: {
@@ -192,7 +196,7 @@ export async function DELETE(
         if (event?.capacity && event._count.registrations < event.capacity) {
             const waitlistRegistration = await prisma.eventRegistration.findFirst({
                 where: {
-                    eventId: params.id,
+                    eventId: id,
                     status: 'WAITLIST'
                 },
                 orderBy: { registeredAt: 'asc' }

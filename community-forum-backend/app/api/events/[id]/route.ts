@@ -26,11 +26,13 @@ import { handleApiError } from '@/lib/utils/error-handler'
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await context.params
+
         const event = await prisma.event.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 creator: {
                     select: {
@@ -129,18 +131,20 @@ export async function GET(
  */
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getAuthUser(request)
         requireAdmin(user)
+
+        const { id } = await context.params
 
         const body = await request.json()
         const validatedData = updateEventSchema.parse(body)
 
         // Check if event exists
         const existingEvent = await prisma.event.findUnique({
-            where: { id: params.id }
+            where: { id }
         })
 
         if (!existingEvent) {
@@ -148,7 +152,7 @@ export async function PUT(
         }
 
         const updatedEvent = await prisma.event.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 ...validatedData,
                 ...(validatedData.startDate && { startDate: new Date(validatedData.startDate) }),
@@ -204,15 +208,17 @@ export async function PUT(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getAuthUser(request)
         requireAdmin(user)
 
+        const { id } = await context.params
+
         // Check if event exists
         const existingEvent = await prisma.event.findUnique({
-            where: { id: params.id }
+            where: { id }
         })
 
         if (!existingEvent) {
@@ -221,7 +227,7 @@ export async function DELETE(
 
         // Soft delete by updating status
         await prisma.event.update({
-            where: { id: params.id },
+            where: { id },
             data: { status: 'CANCELLED' }
         })
 
