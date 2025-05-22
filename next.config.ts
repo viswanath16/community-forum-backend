@@ -15,9 +15,6 @@ const nextConfig: NextConfig = {
       'localhost'
     ]
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client']
-  },
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
