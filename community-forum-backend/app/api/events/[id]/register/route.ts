@@ -42,8 +42,11 @@ export async function POST(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await getAuthUser(request)
-        requireAuth(user)
+        const authUser = await getAuthUser(request)
+        requireAuth(authUser)
+
+        // Type assertion after requireAuth check
+        const user = authUser!
 
         const { id } = await context.params
 
@@ -152,8 +155,11 @@ export async function DELETE(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const user = await getAuthUser(request)
-        requireAuth(user)
+        const authUser = await getAuthUser(request)
+        requireAuth(authUser)
+
+        // Type assertion after requireAuth check
+        const user = authUser!
 
         const { id } = await context.params
 

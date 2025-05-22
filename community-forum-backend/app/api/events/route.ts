@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAuthUser, requireAdmin } from '@/lib/auth'
+import {getAuthUser, requireAdmin, requireAuth} from '@/lib/auth'
 import { createEventSchema, eventQuerySchema } from '@/lib/validations/events'
 import {successResponse, paginatedResponse, errorResponse} from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
@@ -183,8 +183,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const user = await getAuthUser(request)
-        requireAdmin(user)
+        const authUser = await getAuthUser(request)
+        requireAuth(authUser)
+
+        // Type assertion after requireAuth check
+        const user = authUser!
 
         const body = await request.json()
         const validatedData = createEventSchema.parse(body)
