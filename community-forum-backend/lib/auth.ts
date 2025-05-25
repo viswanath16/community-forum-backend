@@ -1,6 +1,3 @@
-// @ts-nocheck
-// Temporarily disable TypeScript checking for this file due to jsonwebtoken type issues
-
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { NextRequest } from 'next/server'
@@ -23,7 +20,12 @@ export function generateToken(payload: JWTPayload): string {
 }
 
 export function verifyToken(token: string): JWTPayload {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
+    try {
+        return jwt.verify(token, JWT_SECRET) as JWTPayload
+    } catch (error) {
+        console.error('Token verification failed:', error)
+        throw new Error('Invalid or expired token')
+    }
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -37,12 +39,24 @@ export async function comparePassword(password: string, hash: string): Promise<b
 export async function getAuthUser(request: NextRequest) {
     try {
         const authHeader = request.headers.get('authorization')
-        if (!authHeader) return null
+        console.log('Auth header:', authHeader) // Debug log
+
+        if (!authHeader) {
+            console.log('No auth header found')
+            return null
+        }
 
         const token = authHeader.replace('Bearer ', '')
-        if (!token) return null
+        if (!token) {
+            console.log('No token found after Bearer')
+            return null
+        }
+
+        console.log('Token:', token.substring(0, 20) + '...') // Debug log (partial token)
 
         const payload = verifyToken(token)
+        console.log('Token payload:', payload) // Debug log
+
         const user = await prisma.user.findUnique({
             where: { id: payload.userId },
             include: {
@@ -50,6 +64,7 @@ export async function getAuthUser(request: NextRequest) {
             }
         })
 
+        console.log('User found:', user ? 'Yes' : 'No') // Debug log
         return user
     } catch (error) {
         console.error('Auth error:', error)

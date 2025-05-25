@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -22,36 +21,8 @@ export function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
-    // Protected routes that require authentication
-    const protectedPaths = [
-        '/api/users',
-        '/api/events'
-    ]
-
-    const isProtectedPath = protectedPaths.some(path =>
-        pathname.startsWith(path)
-    )
-
-    if (isProtectedPath) {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '')
-
-        if (!token) {
-            return NextResponse.json(
-                { success: false, error: 'Authentication required' },
-                { status: 401 }
-            )
-        }
-
-        try {
-            verifyToken(token)
-        } catch (error) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid or expired token' },
-                { status: 401 }
-            )
-        }
-    }
-
+    // For protected routes, let the individual route handlers handle authentication
+    // This removes the duplicate token verification issue
     return NextResponse.next()
 }
 
