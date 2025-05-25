@@ -30,6 +30,12 @@ model User {
   events             Event[]
   eventRegistrations EventRegistration[]
 
+  // Marketplace relations
+  marketListings MarketListing[]
+  buyRequests    MarketRequest[]
+  sellerReviews  MarketReview[]  @relation("SellerReviews")
+  buyerReviews   MarketReview[]  @relation("BuyerReviews")
+
   @@map("users")
 }
 
@@ -44,8 +50,9 @@ model Neighborhood {
   updatedAt           DateTime @updatedAt
 
   // Relations
-  users  User[]
-  events Event[]
+  users          User[]
+  events         Event[]
+  marketListings MarketListing[]
 
   @@map("neighborhoods")
 }
@@ -93,6 +100,116 @@ model EventRegistration {
   @@map("event_registrations")
 }
 
+// Marketplace Models
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  parentId    String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent         Category?       @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories  Category[]      @relation("CategoryHierarchy")
+  marketListings MarketListing[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  marketListings MarketListingTag[]
+
+  @@map("tags")
+}
+
+model MarketListing {
+  id             String        @id @default(uuid())
+  title          String
+  description    String
+  price          Decimal?      @db.Decimal(10, 2)
+  isFree         Boolean       @default(false)
+  condition      ItemCondition
+  status         ListingStatus @default(ACTIVE)
+  sellerId       String
+  categoryId     String
+  neighborhoodId String?
+  images         String[] // Array of image URLs
+  views          Int           @default(0)
+  isPromoted     Boolean       @default(false)
+  promotedUntil  DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  seller       User               @relation(fields: [sellerId], references: [id])
+  category     Category           @relation(fields: [categoryId], references: [id])
+  neighborhood Neighborhood?      @relation(fields: [neighborhoodId], references: [id])
+  requests     MarketRequest[]
+  tags         MarketListingTag[]
+  reviews      MarketReview[]
+
+  @@map("market_listings")
+}
+
+model MarketListingTag {
+  id        String @id @default(uuid())
+  listingId String
+  tagId     String
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tag     Tag           @relation(fields: [tagId], references: [id])
+
+  @@unique([listingId, tagId])
+  @@map("market_listing_tags")
+}
+
+model MarketRequest {
+  id        String        @id @default(uuid())
+  listingId String
+  buyerId   String
+  message   String?
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User          @relation(fields: [buyerId], references: [id])
+
+  @@unique([listingId, buyerId])
+  @@map("market_requests")
+}
+
+model MarketReview {
+  id        String     @id @default(uuid())
+  listingId String
+  sellerId  String
+  buyerId   String
+  rating    Int // 1-5 stars
+  comment   String?
+  type      ReviewType // SELLER or BUYER
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  seller  User          @relation("SellerReviews", fields: [sellerId], references: [id])
+  buyer   User          @relation("BuyerReviews", fields: [buyerId], references: [id])
+
+  @@unique([listingId, buyerId])
+  @@map("market_reviews")
+}
+
 // Enums
 enum EventCategory {
   SPORTS
@@ -119,4 +236,31 @@ enum RegistrationStatus {
   WAITLIST
   CANCELLED
   ATTENDED
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  USED
+  WORN
+}
+
+enum ListingStatus {
+  ACTIVE
+  RESERVED
+  SOLD
+  CLOSED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum ReviewType {
+  SELLER
+  BUYER
 }
