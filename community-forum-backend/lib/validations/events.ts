@@ -36,8 +36,14 @@ export const eventRegistrationSchema = z.object({
 })
 
 export const eventQuerySchema = z.object({
-    page: z.coerce.number().positive().default(1),
-    limit: z.coerce.number().positive().max(100).default(10),
+    page: z.string().optional().default('1').transform((val) => {
+        const num = parseInt(val, 10)
+        return isNaN(num) || num < 1 ? 1 : num
+    }),
+    limit: z.string().optional().default('10').transform((val) => {
+        const num = parseInt(val, 10)
+        return isNaN(num) || num < 1 ? 10 : Math.min(num, 100)
+    }),
     category: z.nativeEnum(EventCategory).optional(),
     neighborhoodId: z.string().uuid().optional(),
     startDate: z.string().datetime().optional(),
