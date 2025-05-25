@@ -1,25 +1,28 @@
-import type { NextConfig } from 'next'
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
     typescript: {
-        ignoreBuildErrors: true, // Temporarily to bypass type errors
+        ignoreBuildErrors: false,
     },
-    serverExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken'],
+    experimental: {
+        serverComponentsExternalPackages: ['@prisma/client'],
+        // Add this to fix the export-detail.json issue
+        esmExternals: 'loose'
+    },
     images: {
         domains: [
             'supabase.co',
             'localhost'
         ]
     },
-    experimental: {
-        serverComponentsExternalPackages: ['@prisma/client']
-    },
     env: {
         CUSTOM_KEY: process.env.CUSTOM_KEY,
     },
+    // Add output configuration to prevent static export issues
+    output: undefined, // Remove any static export configuration
+
     async headers() {
         return [
             {
@@ -32,7 +35,6 @@ const nextConfig: NextConfig = {
             },
         ]
     },
-    output: 'standalone'
 }
 
-export default nextConfig
+module.exports = nextConfig
