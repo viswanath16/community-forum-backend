@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {getAuthUser, requireAdmin, requireAuth} from '@/lib/auth'
-import { createEventSchema, eventQuerySchema } from '@/lib/validations/events'
-import {successResponse, paginatedResponse, errorResponse} from '@/lib/utils/responses'
+import { getAuthUser } from '@/lib/auth'
+import { createEventSchema } from '@/lib/validations/events'
+import { successResponse, paginatedResponse, errorResponse } from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
 
 /**
@@ -39,38 +39,56 @@ import { handleApiError } from '@/lib/utils/error-handler'
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
-        const query = eventQuerySchema.parse({
-            page: searchParams.get('page'),
-            limit: searchParams.get('limit'),
-            category: searchParams.get('category'),
-            neighborhoodId: searchParams.get('neighborhoodId'),
-            startDate: searchParams.get('startDate'),
-            endDate: searchParams.get('endDate'),
-            search: searchParams.get('search')
-        })
 
-        const skip = (query.page - 1) * query.limit
+        // Parse query parameters manually (no Zod validation)
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10', 10)))
+        const category = searchParams.get('category')
+        const neighborhoodId = searchParams.get('neighborhoodId')
+        const startDate = searchParams.get('startDate')
+        const endDate = searchParams.get('endDate')
+        const search = searchParams.get('search')
 
-        const where = {
-            status: 'ACTIVE' as const,
-            ...(query.category && { category: query.category }),
-            ...(query.neighborhoodId && { neighborhoodId: query.neighborhoodId }),
-            ...(query.startDate && {
-                startDate: {
-                    gte: new Date(query.startDate)
+        const skip = (page - 1) * limit
+
+        // Build where clause conditionally
+        const where: any = {
+            status: 'ACTIVE'
+        }
+
+        if (category) {
+            where.category = category
+        }
+
+        if (neighborhoodId) {
+            where.neighborhoodId = neighborhoodId
+        }
+
+        if (startDate) {
+            try {
+                where.startDate = { gte: new Date(startDate) }
+            } catch (e) {
+                // Invalid date, ignore
+            }
+        }
+
+        if (endDate) {
+            try {
+                if (where.startDate) {
+                    where.startDate = { ...where.startDate, lte: new Date(endDate) }
+                } else {
+                    where.startDate = { lte: new Date(endDate) }
                 }
-            }),
-            ...(query.endDate && {
-                startDate: {
-                    lte: new Date(query.endDate)
-                }
-            }),
-            ...(query.search && {
-                OR: [
-                    { title: { contains: query.search, mode: 'insensitive' as const } },
-                    { description: { contains: query.search, mode: 'insensitive' as const } }
-                ]
-            })
+            } catch (e) {
+                // Invalid date, ignore
+            }
+        }
+
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } }
+            ]
         }
 
         const [events, total] = await Promise.all([
@@ -112,14 +130,14 @@ export async function GET(request: NextRequest) {
                 },
                 orderBy: { startDate: 'asc' },
                 skip,
-                take: query.limit
+                take: limit
             }),
             prisma.event.count({ where })
         ])
 
         return paginatedResponse(events, {
-            page: query.page,
-            limit: query.limit,
+            page,
+            limit,
             total
         })
 
@@ -183,11 +201,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const authUser = await getAuthUser(request)
-        requireAuth(authUser)
+        const user = await getAuthUser(request)
 
-        // Type assertion after requireAuth check
-        const user = authUser!
+        if (!user?.isAdmin) {
+            return errorResponse('Admin access required', 403)
+        }
 
         const body = await request.json()
         const validatedData = createEventSchema.parse(body)
