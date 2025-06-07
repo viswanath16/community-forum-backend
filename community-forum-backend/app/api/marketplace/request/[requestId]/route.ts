@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, requireAuth } from '@/lib/auth'
-import { updateRequestStatusSchema } from '@/lib/validations/marketplace'
+import { validateUpdateRequestStatus } from '@/lib/validations/marketplace'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
 
@@ -65,7 +65,11 @@ export async function PUT(
         const { id, requestId } = await context.params
 
         const body = await request.json()
-        const validatedData = updateRequestStatusSchema.parse(body)
+        const validation = validateUpdateRequestStatus(body)
+        if (!validation.isValid) {
+            return errorResponse(`Validation error: ${validation.errors.join(', ')}`, 400)
+        }
+        const validatedData = validation.data!
 
         // Check if request exists and belongs to the listing
         const marketRequest = await prisma.marketRequest.findUnique({
