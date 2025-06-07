@@ -193,6 +193,7 @@ export async function GET(
  *       500:
  *         description: Server error
  */
+// ...existing code...
 export async function PUT(
     request: NextRequest,
     context: { params: Promise<{ id: string }> }
@@ -226,120 +227,101 @@ export async function PUT(
             return errorResponse('Forbidden - Not the seller or admin', 403)
         }
 
-        // Soft delete by updating status to CLOSED
-        await prisma.marketListing.update({
-            where: { id },
-            data: { status: 'CLOSED' }
+        // Verify category exists if being updated
+        if (validatedData.categoryId) {
+            const category = await prisma.category.findUnique({
+                where: { id: validatedData.categoryId, isActive: true }
+            })
+
+            if (!category) {
+                return errorResponse('Category not found or inactive', 404)
+            }
+        }
+
+        // Verify neighborhood exists if being updated
+        if (validatedData.neighborhoodId) {
+            const neighborhood = await prisma.neighborhood.findUnique({
+                where: { id: validatedData.neighborhoodId }
+            })
+
+            if (!neighborhood) {
+                return errorResponse('Neighborhood not found', 404)
+            }
+        }
+
+        // Update listing in transaction
+        const updatedListing = await prisma.$transaction(async (tx) => {
+            // Update the listing
+            const updateData: any = {}
+            if (validatedData.title !== undefined) updateData.title = validatedData.title
+            if (validatedData.description !== undefined) updateData.description = validatedData.description
+            if (validatedData.price !== undefined) updateData.price = validatedData.price
+            if (validatedData.isFree !== undefined) updateData.isFree = validatedData.isFree
+            if (validatedData.condition !== undefined) updateData.condition = validatedData.condition
+            if (validatedData.images !== undefined) updateData.images = validatedData.images
+            if (validatedData.categoryId !== undefined) updateData.categoryId = validatedData.categoryId
+            if (validatedData.neighborhoodId !== undefined) updateData.neighborhoodId = validatedData.neighborhoodId
+
+            const updated = await tx.marketListing.update({
+                where: { id },
+                data: updateData,
+                include: {
+                    seller: {
+                        select: {
+                            id: true,
+                            username: true,
+                            fullName: true,
+                            avatarUrl: true,
+                            reputationScore: true
+                        }
+                    },
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true
+                        }
+                    },
+                    neighborhood: {
+                        select: {
+                            id: true,
+                            name: true,
+                            city: true,
+                            postalCode: true
+                        }
+                    }
+                }
+            })
+
+            // Update tags if provided
+            if (validatedData.tagIds !== undefined) {
+                // Delete existing tags
+                await tx.marketListingTag.deleteMany({
+                    where: { listingId: id }
+                })
+
+                // Add new tags
+                if (validatedData.tagIds.length > 0) {
+                    await tx.marketListingTag.createMany({
+                        data: validatedData.tagIds.map(tagId => ({
+                            listingId: id,
+                            tagId
+                        })),
+                        skipDuplicates: true
+                    })
+                }
+            }
+
+            return updated
         })
 
-        return successResponse(null, 'Listing deleted successfully')
+        return successResponse(updatedListing, 'Listing updated successfully')
 
     } catch (error) {
         return handleApiError(error)
     }
-}Listing) {
-    return errorResponse('Listing not found', 404)
 }
-
-if (existingListing.sellerId !== user.id && !user.isAdmin) {
-    return errorResponse('Forbidden - Not the seller or admin', 403)
-}
-
-// Verify category exists if being updated
-if (validatedData.categoryId) {
-    const category = await prisma.category.findUnique({
-        where: { id: validatedData.categoryId, isActive: true }
-    })
-
-    if (!category) {
-        return errorResponse('Category not found or inactive', 404)
-    }
-}
-
-// Verify neighborhood exists if being updated
-if (validatedData.neighborhoodId) {
-    const neighborhood = await prisma.neighborhood.findUnique({
-        where: { id: validatedData.neighborhoodId }
-    })
-
-    if (!neighborhood) {
-        return errorResponse('Neighborhood not found', 404)
-    }
-}
-
-// Update listing in transaction
-const updatedListing = await prisma.$transaction(async (tx) => {
-    // Update the listing
-    const updateData: any = {}
-    if (validatedData.title !== undefined) updateData.title = validatedData.title
-    if (validatedData.description !== undefined) updateData.description = validatedData.description
-    if (validatedData.price !== undefined) updateData.price = validatedData.price
-    if (validatedData.isFree !== undefined) updateData.isFree = validatedData.isFree
-    if (validatedData.condition !== undefined) updateData.condition = validatedData.condition
-    if (validatedData.images !== undefined) updateData.images = validatedData.images
-    if (validatedData.categoryId !== undefined) updateData.categoryId = validatedData.categoryId
-    if (validatedData.neighborhoodId !== undefined) updateData.neighborhoodId = validatedData.neighborhoodId
-
-    const updated = await tx.marketListing.update({
-        where: { id },
-        data: updateData,
-        include: {
-            seller: {
-                select: {
-                    id: true,
-                    username: true,
-                    fullName: true,
-                    avatarUrl: true,
-                    reputationScore: true
-                }
-            },
-            category: {
-                select: {
-                    id: true,
-                    name: true,
-                    description: true
-                }
-            },
-            neighborhood: {
-                select: {
-                    id: true,
-                    name: true,
-                    city: true,
-                    postalCode: true
-                }
-            }
-        }
-    })
-
-    // Update tags if provided
-    if (validatedData.tagIds !== undefined) {
-        // Delete existing tags
-        await tx.marketListingTag.deleteMany({
-            where: { listingId: id }
-        })
-
-        // Add new tags
-        if (validatedData.tagIds.length > 0) {
-            await tx.marketListingTag.createMany({
-                data: validatedData.tagIds.map(tagId => ({
-                    listingId: id,
-                    tagId
-                })),
-                skipDuplicates: true
-            })
-        }
-    }
-
-    return updated
-})
-
-return successResponse(updatedListing, 'Listing updated successfully')
-
-} catch (error) {
-    return handleApiError(error)
-}
-}
-
+// ...existing code...
 /**
  * @swagger
  * /api/marketplace/{id}:
@@ -383,4 +365,22 @@ export async function DELETE(
             where: { id }
         })
 
-        if (!existing
+        if (!existingListing) {
+            return errorResponse('Listing not found', 404)
+        }
+
+        if (existingListing.sellerId !== user.id && !user.isAdmin) {
+            return errorResponse('Forbidden - Not the seller or admin', 403)
+        }
+
+        // Soft delete: set status to 'CLOSED'
+        await prisma.marketListing.update({
+            where: { id },
+            data: { status: 'CLOSED' }
+        })
+
+        return successResponse(null, 'Listing deleted successfully')
+    } catch (error) {
+        return handleApiError(error)
+    }
+}
