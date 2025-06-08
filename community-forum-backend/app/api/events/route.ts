@@ -1,3 +1,5 @@
+// app/api/events/route.ts - Enhanced version with advanced filtering
+
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
@@ -10,7 +12,7 @@ import { handleApiError } from '@/lib/utils/error-handler'
  * /api/events:
  *   get:
  *     tags: [Events]
- *     summary: Get all events
+ *     summary: Get all events with advanced filtering
  *     parameters:
  *       - in: query
  *         name: page
@@ -21,37 +23,80 @@ import { handleApiError } from '@/lib/utils/error-handler'
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
+ *           default: 12
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
  *           enum: [SPORTS, CULTURAL, EDUCATIONAL, VOLUNTEER, SOCIAL, BUSINESS, HEALTH, ENVIRONMENT, TECHNOLOGY, OTHER]
  *       - in: query
- *         name: neighborhoodId
+ *         name: neighborhood
  *         schema:
  *           type: string
  *           format: uuid
+ *       - in: query
+ *         name: date_from
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: date_to
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sort_by
+ *         schema:
+ *           type: string
+ *           enum: [date, popularity, price]
+ *           default: date
+ *       - in: query
+ *         name: sort_order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *       - in: query
+ *         name: price_min
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: price_max
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: has_spots_available
+ *         schema:
+ *           type: boolean
  *     responses:
  *       200:
- *         description: List of events
+ *         description: Enhanced list of events with detailed information
  */
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
 
-        // Parse query parameters manually (no Zod validation)
+        // Parse query parameters
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10', 10)))
+        const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '12', 10)))
         const category = searchParams.get('category')
-        const neighborhoodId = searchParams.get('neighborhoodId')
-        const startDate = searchParams.get('startDate')
-        const endDate = searchParams.get('endDate')
+        const neighborhood = searchParams.get('neighborhood')
+        const dateFrom = searchParams.get('date_from')
+        const dateTo = searchParams.get('date_to')
         const search = searchParams.get('search')
+        const sortBy = searchParams.get('sort_by') || 'date'
+        const sortOrder = searchParams.get('sort_order') || 'asc'
+        const priceMin = searchParams.get('price_min')
+        const priceMax = searchParams.get('price_max')
+        const hasSpotsAvailable = searchParams.get('has_spots_available')
 
         const skip = (page - 1) * limit
 
-        // Build where clause conditionally
+        // Build enhanced where clause
         const where: any = {
             status: 'ACTIVE'
         }
@@ -60,35 +105,46 @@ export async function GET(request: NextRequest) {
             where.category = category
         }
 
-        if (neighborhoodId) {
-            where.neighborhoodId = neighborhoodId
+        if (neighborhood) {
+            where.neighborhoodId = neighborhood
         }
 
-        if (startDate) {
-            try {
-                where.startDate = { gte: new Date(startDate) }
-            } catch (e) {
-                // Invalid date, ignore
+        if (dateFrom || dateTo) {
+            where.startDate = {}
+            if (dateFrom) {
+                where.startDate.gte = new Date(dateFrom)
             }
-        }
-
-        if (endDate) {
-            try {
-                if (where.startDate) {
-                    where.startDate = { ...where.startDate, lte: new Date(endDate) }
-                } else {
-                    where.startDate = { lte: new Date(endDate) }
-                }
-            } catch (e) {
-                // Invalid date, ignore
+            if (dateTo) {
+                const endDate = new Date(dateTo)
+                endDate.setHours(23, 59, 59, 999) // End of day
+                where.startDate.lte = endDate
             }
         }
 
         if (search) {
             where.OR = [
                 { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } }
+                { description: { contains: search, mode: 'insensitive' } },
+                { location: { contains: search, mode: 'insensitive' } }
             ]
+        }
+
+        // Build order clause
+        let orderBy: any = {}
+        switch (sortBy) {
+            case 'date':
+                orderBy = { startDate: sortOrder }
+                break
+            case 'popularity':
+                // Sort by registration count (requires aggregation)
+                orderBy = { startDate: sortOrder } // Fallback for now
+                break
+            case 'price':
+                // For future implementation when events have prices
+                orderBy = { startDate: sortOrder } // Fallback for now
+                break
+            default:
+                orderBy = { startDate: 'asc' }
         }
 
         const [events, total] = await Promise.all([
@@ -100,14 +156,16 @@ export async function GET(request: NextRequest) {
                             id: true,
                             username: true,
                             fullName: true,
-                            avatarUrl: true
+                            avatarUrl: true,
+                            isAdmin: true
                         }
                     },
                     neighborhood: {
                         select: {
                             id: true,
                             name: true,
-                            city: true
+                            city: true,
+                            postalCode: true
                         }
                     },
                     registrations: {
@@ -117,7 +175,8 @@ export async function GET(request: NextRequest) {
                             user: {
                                 select: {
                                     id: true,
-                                    username: true
+                                    username: true,
+                                    avatarUrl: true
                                 }
                             }
                         }
@@ -128,77 +187,108 @@ export async function GET(request: NextRequest) {
                         }
                     }
                 },
-                orderBy: { startDate: 'asc' },
+                orderBy,
                 skip,
                 take: limit
             }),
             prisma.event.count({ where })
         ])
 
-        return paginatedResponse(events, {
-            page,
-            limit,
-            total
+        // Transform to enhanced format
+        const enhancedEvents = events.map(event => {
+            const registeredCount = event.registrations.filter(r => r.status === 'REGISTERED').length
+            const waitingListCount = event.registrations.filter(r => r.status === 'WAITLIST').length
+            
+            return {
+                id: event.id,
+                title: event.title,
+                description: event.description,
+                short_description: event.description.length > 150 
+                    ? event.description.substring(0, 150) + '...' 
+                    : event.description,
+                date: event.startDate.toISOString().split('T')[0],
+                time: event.startDate.toTimeString().substring(0, 5),
+                end_time: event.endDate?.toTimeString().substring(0, 5) || null,
+                location: {
+                    name: event.location,
+                    address: event.location,
+                    coordinates: event.coordinates as any || null
+                },
+                category: {
+                    id: event.category.toLowerCase().replace('_', '-'),
+                    name: event.category.charAt(0) + event.category.slice(1).toLowerCase().replace('_', ' '),
+                    color: getCategoryColor(event.category)
+                },
+                organizer: {
+                    id: event.creator.id,
+                    name: event.creator.fullName || event.creator.username,
+                    avatar: event.creator.avatarUrl || null,
+                    verified: event.creator.isAdmin
+                },
+                attendees: {
+                    current: registeredCount,
+                    max: event.capacity || null,
+                    waiting_list: waitingListCount
+                },
+                price: {
+                    amount: 0, // Events are currently free
+                    currency: "EUR",
+                    is_free: true
+                },
+                images: event.imageUrl ? [{
+                    id: "img_1",
+                    url: event.imageUrl,
+                    alt: event.title,
+                    is_primary: true
+                }] : [],
+                tags: [], // To be implemented
+                status: "published",
+                registration_status: hasSpotsAvailable === 'true' && event.capacity 
+                    ? (registeredCount < event.capacity ? "open" : "full") 
+                    : "open",
+                created_at: event.createdAt.toISOString(),
+                updated_at: event.updatedAt.toISOString(),
+                is_featured: false,
+                recurring: event.isRecurring ? event.recurrencePattern : null
+            }
         })
+
+        // Filter by spots available if requested
+        const filteredEvents = hasSpotsAvailable === 'true' 
+            ? enhancedEvents.filter(event => 
+                !event.attendees.max || event.attendees.current < event.attendees.max
+            )
+            : enhancedEvents
+
+        const responseData = {
+            events: filteredEvents,
+            pagination: {
+                current_page: page,
+                total_pages: Math.ceil(total / limit),
+                total_events: total,
+                per_page: limit,
+                has_next: page < Math.ceil(total / limit),
+                has_prev: page > 1
+            },
+            filters_applied: {
+                category,
+                neighborhood,
+                date_from: dateFrom,
+                date_to: dateTo,
+                search,
+                sort_by: sortBy,
+                sort_order: sortOrder
+            }
+        }
+
+        return successResponse(responseData, 'Events retrieved successfully')
 
     } catch (error) {
         return handleApiError(error)
     }
 }
 
-/**
- * @swagger
- * /api/events:
- *   post:
- *     tags: [Events]
- *     summary: Create a new event (Admin only)
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - description
- *               - category
- *               - startDate
- *               - location
- *               - neighborhoodId
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               category:
- *                 type: string
- *                 enum: [SPORTS, CULTURAL, EDUCATIONAL, VOLUNTEER, SOCIAL, BUSINESS, HEALTH, ENVIRONMENT, TECHNOLOGY, OTHER]
- *               startDate:
- *                 type: string
- *                 format: date-time
- *               endDate:
- *                 type: string
- *                 format: date-time
- *               location:
- *                 type: string
- *               capacity:
- *                 type: integer
- *               neighborhoodId:
- *                 type: string
- *                 format: uuid
- *               isRecurring:
- *                 type: boolean
- *               imageUrl:
- *                 type: string
- *                 format: uri
- *     responses:
- *       201:
- *         description: Event created successfully
- *       403:
- *         description: Admin access required
- */
+// Keep existing POST method for event creation
 export async function POST(request: NextRequest) {
     try {
         const user = await getAuthUser(request)
@@ -249,4 +339,21 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         return handleApiError(error)
     }
+}
+
+// Helper function for category colors
+function getCategoryColor(category: string): string {
+    const colors = {
+        SPORTS: '#E74C3C',
+        CULTURAL: '#9B59B6',
+        EDUCATIONAL: '#FF6B35',
+        VOLUNTEER: '#2ECC71',
+        SOCIAL: '#3498DB',
+        BUSINESS: '#34495E',
+        HEALTH: '#1ABC9C',
+        ENVIRONMENT: '#27AE60',
+        TECHNOLOGY: '#8E44AD',
+        OTHER: '#95A5A6'
+    }
+    return colors[category as keyof typeof colors] || '#95A5A6'
 }

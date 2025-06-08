@@ -24,6 +24,8 @@ model User {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   lastActive              DateTime @default(now())
+  eventComments           EventComment[]
+  eventViews              EventView[]
 
   // Relations
   neighborhood       Neighborhood?       @relation(fields: [neighborhoodId], references: [id])
@@ -57,22 +59,30 @@ model Neighborhood {
   @@map("neighborhoods")
 }
 
+// Enhanced Event model (update existing)
 model Event {
   id                String        @id @default(uuid())
   title             String
-  description       String
+  description       String        @db.Text
+  shortDescription  String?       // For previews
   category          EventCategory
   startDate         DateTime
   endDate           DateTime?
   location          String
   coordinates       Json?
   capacity          Int?
+  price             Decimal?      @db.Decimal(10, 2) // For paid events
+  isFree            Boolean       @default(true)
+  tags              String[]      // Array of tags
   createdBy         String
   neighborhoodId    String
   isRecurring       Boolean       @default(false)
   recurrencePattern Json?
   status            EventStatus   @default(ACTIVE)
   imageUrl          String?
+  featured          Boolean       @default(false)
+  requiresApproval  Boolean       @default(false)
+  maxWaitlist       Int?          // Maximum waitlist size
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -80,8 +90,29 @@ model Event {
   creator       User                @relation(fields: [createdBy], references: [id])
   neighborhood  Neighborhood        @relation(fields: [neighborhoodId], references: [id])
   registrations EventRegistration[]
+  comments      EventComment[]
+  views         EventView[]
+  images        EventImage[]        // ADD THIS LINE
 
   @@map("events")
+}
+
+model EventComment {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  content   String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id])
+  parent   EventComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  EventComment[] @relation("CommentReplies")
+
+  @@map("event_comments")
 }
 
 model EventRegistration {
@@ -90,7 +121,10 @@ model EventRegistration {
   userId       String
   status       RegistrationStatus @default(REGISTERED)
   registeredAt DateTime           @default(now())
-  notes        String?
+  notes        String?            @db.Text
+  emergencyContact Json?          // Store emergency contact info
+  position     Int?               // Position in registration/waitlist
+  notified     Boolean            @default(false) // For waitlist notifications
 
   // Relations
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -210,25 +244,32 @@ model MarketReview {
   @@map("market_reviews")
 }
 
-// Enums
-enum EventCategory {
-  SPORTS
-  CULTURAL
-  EDUCATIONAL
-  VOLUNTEER
-  SOCIAL
-  BUSINESS
-  HEALTH
-  ENVIRONMENT
-  TECHNOLOGY
-  OTHER
+
+// New EventView model for analytics
+model EventView {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String?  // Null for anonymous views
+  viewedAt  DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  duration  Int?     // Time spent viewing in seconds
+  source    String?  // referrer source
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@map("event_views")
 }
+
 
 enum EventStatus {
   ACTIVE
   CANCELLED
   COMPLETED
   DRAFT
+  POSTPONED
 }
 
 enum RegistrationStatus {
@@ -236,6 +277,7 @@ enum RegistrationStatus {
   WAITLIST
   CANCELLED
   ATTENDED
+  NO_SHOW
 }
 
 enum ItemCondition {
@@ -263,4 +305,52 @@ enum RequestStatus {
 enum ReviewType {
   SELLER
   BUYER
+}
+
+enum EventCategory {
+  SPORTS
+  CULTURAL
+  EDUCATIONAL
+  VOLUNTEER
+  SOCIAL
+  BUSINESS
+  HEALTH
+  ENVIRONMENT
+  TECHNOLOGY
+  MARKET
+  WORKSHOP
+  MEETING
+  CELEBRATION
+  CLEANUP
+  OTHER
+}
+
+
+model EventImage {
+  id        String   @id @default(uuid())
+  eventId   String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_images")
+}
+
+// New model for Event Categories (if you want dynamic categories)
+model EventCategoryData {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  color       String?  // Hex color code
+  icon        String?  // Icon identifier
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("event_categories")
 }

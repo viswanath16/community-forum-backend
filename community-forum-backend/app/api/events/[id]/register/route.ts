@@ -1,16 +1,26 @@
+// app/api/events/[id]/register/route.ts - Enhanced version
+
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, requireAuth } from '@/lib/auth'
-import { eventRegistrationSchema } from '@/lib/validations/events'
 import { successResponse, errorResponse } from '@/lib/utils/responses'
 import { handleApiError } from '@/lib/utils/error-handler'
+import { z } from 'zod'
+
+const enhancedRegistrationSchema = z.object({
+    notes: z.string().max(500, 'Notes must be less than 500 characters').optional(),
+    emergency_contact: z.object({
+        name: z.string().min(1, 'Emergency contact name is required').max(100),
+        phone: z.string().min(10, 'Valid phone number required').max(20)
+    }).optional()
+})
 
 /**
  * @swagger
  * /api/events/{id}/register:
  *   post:
  *     tags: [Events]
- *     summary: Register for an event
+ *     summary: Register for an event with enhanced options
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -29,9 +39,51 @@ import { handleApiError } from '@/lib/utils/error-handler'
  *               notes:
  *                 type: string
  *                 maxLength: 500
+ *                 example: "Looking forward to helping the community!"
+ *               emergency_contact:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     maxLength: 100
+ *                     example: "Jane Doe"
+ *                   phone:
+ *                     type: string
+ *                     maxLength: 20
+ *                     example: "+31612345678"
  *     responses:
  *       201:
  *         description: Successfully registered for event
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully registered for the event!"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     registration_id:
+ *                       type: string
+ *                     event_id:
+ *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [confirmed, waitlist]
+ *                     registered_at:
+ *                       type: string
+ *                       format: date-time
+ *                     position:
+ *                       type: integer
+ *                     waiting_list:
+ *                       type: boolean
  *       400:
  *         description: Already registered or event full
  *       404:
@@ -45,13 +97,11 @@ export async function POST(
         const authUser = await getAuthUser(request)
         requireAuth(authUser)
 
-        // Type assertion after requireAuth check
         const user = authUser!
-
         const { id } = await context.params
 
         const body = await request.json().catch(() => ({}))
-        const validatedData = eventRegistrationSchema.parse(body)
+        const validatedData = enhancedRegistrationSchema.parse(body)
 
         // Check if event exists and is active
         const event = await prisma.event.findUnique({
@@ -75,6 +125,11 @@ export async function POST(
             return errorResponse('Event is not available for registration', 400)
         }
 
+        // Check if event has already passed
+        if (event.startDate < new Date()) {
+            return errorResponse('Cannot register for past events', 400)
+        }
+
         // Check if user is already registered
         const existingRegistration = await prisma.eventRegistration.findUnique({
             where: {
@@ -89,40 +144,81 @@ export async function POST(
             return errorResponse('Already registered for this event', 400)
         }
 
-        // Check capacity
+        // Check capacity and determine status
         const registeredCount = event._count.registrations
         const isAtCapacity = event.capacity && registeredCount >= event.capacity
+        const status = isAtCapacity ? 'WAITLIST' : 'REGISTERED'
+
+        // Calculate position
+        const position = status === 'WAITLIST' 
+            ? await prisma.eventRegistration.count({
+                where: { eventId: id, status: 'WAITLIST' }
+            }) + 1
+            : registeredCount + 1
+
+        // Create registration with enhanced data
+        const registrationData: any = {
+            eventId: id,
+            userId: user.id,
+            status,
+            notes: validatedData.notes
+        }
+
+        // Store emergency contact if provided (would need to extend schema)
+        if (validatedData.emergency_contact) {
+            // In a real implementation, you might want to store this securely
+            // For now, we'll include it in notes
+            const emergencyInfo = `Emergency Contact: ${validatedData.emergency_contact.name} - ${validatedData.emergency_contact.phone}`
+            registrationData.notes = validatedData.notes 
+                ? `${validatedData.notes}\n\n${emergencyInfo}`
+                : emergencyInfo
+        }
 
         const registration = await prisma.eventRegistration.create({
-            data: {
-                eventId: id,
-                userId: user.id,
-                status: isAtCapacity ? 'WAITLIST' : 'REGISTERED',
-                notes: validatedData.notes
-            },
+            data: registrationData,
             include: {
                 event: {
                     select: {
                         id: true,
                         title: true,
-                        startDate: true
+                        startDate: true,
+                        location: true,
+                        capacity: true
                     }
                 },
                 user: {
                     select: {
                         id: true,
                         username: true,
-                        fullName: true
+                        fullName: true,
+                        email: true
                     }
                 }
             }
         })
 
-        const message = isAtCapacity
-            ? 'Added to waitlist successfully'
-            : 'Successfully registered for event'
+        // Format response according to API spec
+        const responseData = {
+            registration_id: registration.id,
+            event_id: registration.eventId,
+            user_id: registration.userId,
+            status: status === 'REGISTERED' ? 'confirmed' : 'waitlist',
+            registered_at: registration.registeredAt.toISOString(),
+            position,
+            waiting_list: status === 'WAITLIST',
+            event_details: {
+                title: registration.event.title,
+                date: registration.event.startDate.toISOString().split('T')[0],
+                time: registration.event.startDate.toTimeString().substring(0, 5),
+                location: registration.event.location
+            }
+        }
 
-        return successResponse(registration, message, 201)
+        const message = status === 'WAITLIST'
+            ? `Added to waitlist successfully. You are position ${position} on the waiting list.`
+            : 'Successfully registered for the event!'
+
+        return successResponse(responseData, message, 201)
 
     } catch (error) {
         return handleApiError(error)
@@ -158,9 +254,7 @@ export async function DELETE(
         const authUser = await getAuthUser(request)
         requireAuth(authUser)
 
-        // Type assertion after requireAuth check
         const user = authUser!
-
         const { id } = await context.params
 
         const registration = await prisma.eventRegistration.findUnique({
@@ -169,6 +263,15 @@ export async function DELETE(
                     eventId: id,
                     userId: user.id
                 }
+            },
+            include: {
+                event: {
+                    select: {
+                        title: true,
+                        startDate: true,
+                        capacity: true
+                    }
+                }
             }
         })
 
@@ -176,6 +279,12 @@ export async function DELETE(
             return errorResponse('Registration not found', 404)
         }
 
+        // Check if event has already started
+        if (registration.event.startDate < new Date()) {
+            return errorResponse('Cannot unregister from events that have already started', 400)
+        }
+
+        // Delete the registration
         await prisma.eventRegistration.delete({
             where: {
                 eventId_userId: {
@@ -213,10 +322,19 @@ export async function DELETE(
                     where: { id: waitlistRegistration.id },
                     data: { status: 'REGISTERED' }
                 })
+
+                // In a real implementation, you'd send a notification to the user
+                // about being moved from waitlist to confirmed
             }
         }
 
-        return successResponse(null, 'Successfully unregistered from event')
+        const responseData = {
+            event_id: id,
+            event_title: registration.event.title,
+            unregistered_at: new Date().toISOString()
+        }
+
+        return successResponse(responseData, 'Successfully unregistered from event')
 
     } catch (error) {
         return handleApiError(error)
