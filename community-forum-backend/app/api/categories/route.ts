@@ -5,7 +5,7 @@ import { handleApiError } from '@/lib/utils/error-handler'
 
 /**
  * @swagger
- * /api/events/categories:
+ * /api/categories:
  *   get:
  *     tags: [Events]
  *     summary: Get all event categories
