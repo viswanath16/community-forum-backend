@@ -98,13 +98,60 @@ export const getApiDocs = async () => {
                                 }
                             }
                         }
+                    },
+                    CommunityPost: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            userId: { type: 'string', format: 'uuid' },
+                            title: { type: 'string' },
+                            content: { type: 'string' },
+                            category: {
+                                type: 'string',
+                                enum: ['SERVICE', 'ISSUE', 'QUESTION', 'ANNOUNCEMENT']
+                            },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' },
+                            user: { $ref: '#/components/schemas/User' },
+                            attachments: {
+                                type: 'array',
+                                items: { $ref: '#/components/schemas/CommunityPostAttachment' }
+                            },
+                            comments: {
+                                type: 'array',
+                                items: { $ref: '#/components/schemas/CommunityPostComment' }
+                            }
+                        }
+                    },
+                    CommunityPostComment: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            postId: { type: 'string', format: 'uuid' },
+                            userId: { type: 'string', format: 'uuid' },
+                            content: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' },
+                            user: { $ref: '#/components/schemas/User' }
+                        }
+                    },
+                    CommunityPostAttachment: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            postId: { type: 'string', format: 'uuid' },
+                            fileUrl: { type: 'string', format: 'url' },
+                            fileType: { type: 'string', enum: ['photo', 'document'] },
+                            createdAt: { type: 'string', format: 'date-time' }
+                        }
                     }
                 }
             },
             tags: [
                 { name: 'Authentication', description: 'User authentication endpoints' },
                 { name: 'Events', description: 'Event management endpoints' },
-                { name: 'Users', description: 'User management endpoints' }
+                { name: 'Users', description: 'User management endpoints' },
+                { name: 'CommunityPosts', description: 'Community posts, comments, and attachments endpoints' }
             ]
         }
     })

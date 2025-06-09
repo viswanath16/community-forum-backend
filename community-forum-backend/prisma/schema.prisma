@@ -26,6 +26,8 @@ model User {
   lastActive              DateTime @default(now())
   eventComments           EventComment[]
   eventViews              EventView[]
+  communityPosts          CommunityPost[]
+  communityPostComments   CommunityPostComment[]
 
   // Relations
   neighborhood       Neighborhood?       @relation(fields: [neighborhoodId], references: [id])
@@ -353,4 +355,50 @@ model EventCategoryData {
   createdAt   DateTime @default(now())
 
   @@map("event_categories")
+}
+
+model CommunityPost {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  content     String
+  category    CommunityPostCategory
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  comments    CommunityPostComment[]
+  attachments CommunityPostAttachment[]
+}
+
+model CommunityPostComment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id])
+}
+
+model CommunityPostAttachment {
+  id        String   @id @default(uuid())
+  postId    String
+  fileUrl   String
+  fileType  String // 'photo', 'document'
+  createdAt DateTime @default(now())
+
+  // Relations
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+enum CommunityPostCategory {
+  SERVICE
+  ISSUE
+  QUESTION
+  ANNOUNCEMENT
 }
