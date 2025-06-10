@@ -1,28 +1,33 @@
 // prisma/seed.ts - Enhanced with all new tables and relationships
 
-import { PrismaClient, EventCategory, ItemCondition, ListingStatus, RequestStatus, ReviewType, EventStatus, RegistrationStatus } from '@prisma/client'
+import { PrismaClient, EventCategory, ItemCondition, ListingStatus, RequestStatus, ReviewType, EventStatus, RegistrationStatus, CommunityPostCategory } from '@prisma/client'
+import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
     console.log('🌱 Starting comprehensive database seeding...')
 
-    // Clear existing data in correct order (due to foreign key constraints)
+    // Clean up existing data
     console.log('🧹 Cleaning existing data...')
-    await prisma.eventView.deleteMany()
-    await prisma.eventComment.deleteMany()
-    await prisma.eventImage.deleteMany()
-    await prisma.eventRegistration.deleteMany()
-    await prisma.marketReview.deleteMany()
-    await prisma.marketRequest.deleteMany()
-    await prisma.marketListingTag.deleteMany()
-    await prisma.marketListing.deleteMany()
-    await prisma.event.deleteMany()
-    await prisma.user.deleteMany()
-    await prisma.tag.deleteMany()
-    await prisma.category.deleteMany()
-    await prisma.neighborhood.deleteMany()
-    await prisma.eventCategoryData.deleteMany()
+    await prisma.$transaction([
+        prisma.marketReview.deleteMany(),
+        prisma.marketRequest.deleteMany(),
+        prisma.marketListingTag.deleteMany(),
+        prisma.marketListing.deleteMany(),
+        prisma.tag.deleteMany(),
+        prisma.category.deleteMany(),
+        prisma.eventRegistration.deleteMany(),
+        prisma.eventComment.deleteMany(),
+        prisma.eventView.deleteMany(),
+        prisma.eventImage.deleteMany(),
+        prisma.event.deleteMany(),
+        prisma.communityPostComment.deleteMany(),
+        prisma.communityPostAttachment.deleteMany(),
+        prisma.communityPost.deleteMany(),
+        prisma.user.deleteMany(),
+        prisma.neighborhood.deleteMany()
+    ])
 
     // 1. Create Neighborhoods
     console.log('🏘️ Creating neighborhoods...')
@@ -86,57 +91,7 @@ async function main() {
         })
     ])
 
-    // 2. Create Event Category Data (for dynamic categories)
-    console.log('📂 Creating event categories...')
-    const eventCategories = await Promise.all([
-        prisma.eventCategoryData.create({
-            data: {
-                name: 'Community Service',
-                description: 'Events focused on helping the community',
-                color: '#2ECC71',
-                icon: 'users',
-                sortOrder: 1
-            }
-        }),
-        prisma.eventCategoryData.create({
-            data: {
-                name: 'Sports & Recreation',
-                description: 'Sports and recreational activities',
-                color: '#E74C3C',
-                icon: 'activity',
-                sortOrder: 2
-            }
-        }),
-        prisma.eventCategoryData.create({
-            data: {
-                name: 'Education',
-                description: 'Learning and educational activities',
-                color: '#FF6B35',
-                icon: 'book',
-                sortOrder: 3
-            }
-        }),
-        prisma.eventCategoryData.create({
-            data: {
-                name: 'Cultural',
-                description: 'Cultural events and celebrations',
-                color: '#9B59B6',
-                icon: 'palette',
-                sortOrder: 4
-            }
-        }),
-        prisma.eventCategoryData.create({
-            data: {
-                name: 'Health & Wellness',
-                description: 'Health and wellness activities',
-                color: '#1ABC9C',
-                icon: 'heart',
-                sortOrder: 5
-            }
-        })
-    ])
-
-    // 3. Create Users
+    // 2. Create Users
     console.log('👥 Creating users...')
     const adminUser = await prisma.user.create({
         data: {
@@ -233,7 +188,7 @@ async function main() {
         })
     ])
 
-    // 4. Create Events with enhanced data
+    // 3. Create Events with enhanced data
     console.log('📅 Creating events...')
     const events = await Promise.all([
         prisma.event.create({
@@ -387,7 +342,7 @@ async function main() {
         })
     ])
 
-    // 5. Create Event Images
+    // 4. Create Event Images
     console.log('🖼️ Creating event images...')
     const eventImages = await Promise.all([
         // Yoga event images
@@ -440,7 +395,7 @@ async function main() {
         })
     ])
 
-    // 6. Create Event Registrations
+    // 5. Create Event Registrations
     console.log('📝 Creating event registrations...')
     const registrations = await Promise.all([
         // Yoga event registrations
@@ -525,7 +480,7 @@ async function main() {
         })
     ])
 
-    // 7. Create Event Comments
+    // 6. Create Event Comments
     console.log('💬 Creating event comments...')
     const comments = await Promise.all([
         // Comments on yoga event
@@ -582,7 +537,7 @@ async function main() {
         })
     ])
 
-    // 8. Create Event Views (for analytics)
+    // 7. Create Event Views (for analytics)
     console.log('👀 Creating event views...')
     const eventViews = []
     for (let i = 0; i < 50; i++) {
@@ -606,7 +561,7 @@ async function main() {
     }
     await Promise.all(eventViews)
 
-    // 9. Create Marketplace Categories
+    // 8. Create Marketplace Categories
     console.log('🏪 Creating marketplace categories...')
     const categories = await Promise.all([
         prisma.category.create({
@@ -667,7 +622,7 @@ async function main() {
         })
     ])
 
-    // 10. Create subcategories
+    // 9. Create subcategories
     console.log('📂 Creating subcategories...')
     const subcategories = await Promise.all([
         prisma.category.create({
@@ -704,7 +659,7 @@ async function main() {
         })
     ])
 
-    // 11. Create Tags
+    // 10. Create Tags
     console.log('🏷️ Creating tags...')
     const tags = await Promise.all([
         prisma.tag.create({
@@ -751,7 +706,7 @@ async function main() {
         })
     ])
 
-    // 12. Create Marketplace Listings
+    // 11. Create Marketplace Listings
     console.log('🛍️ Creating marketplace listings...')
     const marketListings = await Promise.all([
         prisma.marketListing.create({
@@ -898,7 +853,7 @@ async function main() {
         })
     ])
 
-    // 13. Create Market Listing Tags
+    // 12. Create Market Listing Tags
     console.log('🔗 Creating listing tags...')
     await Promise.all([
         // iPhone - like-new tag
@@ -951,7 +906,7 @@ async function main() {
         })
     ])
 
-    // 14. Create Market Requests
+    // 13. Create Market Requests
     console.log('💰 Creating market requests...')
     const marketRequests = await Promise.all([
         prisma.marketRequest.create({
@@ -1004,7 +959,7 @@ async function main() {
         })
     ])
 
-    // 15. Create Market Reviews
+    // 14. Create Market Reviews
     console.log('⭐ Creating market reviews...')
     await Promise.all([
         // Review for completed MacBook transaction
@@ -1042,6 +997,26 @@ async function main() {
         })
     ])
 
+    // 15. Create Community Posts
+    console.log('📝 Creating community posts...')
+    const post1 = await prisma.communityPost.create({
+        data: {
+            title: 'Welcome to our community!',
+            content: 'Welcome everyone to our new community forum.',
+            category: CommunityPostCategory.ANNOUNCEMENT,
+            userId: adminUser.id
+        }
+    })
+
+    // Create community post comments
+    await prisma.communityPostComment.create({
+        data: {
+            postId: post1.id,
+            userId: users[0].id,
+            content: 'Thanks for the warm welcome!'
+        }
+    })
+
     console.log('✅ Database seeding completed successfully!')
     
     // Print summary
@@ -1053,7 +1028,7 @@ async function main() {
     console.log(`├─ 📝 Event Registrations: ${registrations.length}`)
     console.log(`├─ 💬 Event Comments: ${comments.length}`)
     console.log(`├─ 👀 Event Views: 50`)
-    console.log(`├─ 📂 Event Categories: ${eventCategories.length}`)
+    console.log(`├─ 📂 Event Categories: ${categories.length}`)
     console.log(`├─ 🏪 Marketplace Categories: ${categories.length}`)
     console.log(`├─ 📂 Subcategories: ${subcategories.length}`)
     console.log(`├─ 🏷️ Tags: ${tags.length}`)

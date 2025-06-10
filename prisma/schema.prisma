@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("PRISMA_DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                      String   @id @default(uuid())
+  email                   String   @unique
+  username                String   @unique
+  fullName                String?
+  avatarUrl               String?
+  phone                   String?
+  neighborhoodId          String?
+  isVerified              Boolean  @default(false)
+  isAdmin                 Boolean  @default(false)
+  reputationScore         Int      @default(0)
+  privacySettings         Json?
+  notificationPreferences Json?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  lastActive              DateTime @default(now())
+  eventComments           EventComment[]
+  eventViews              EventView[]
+  communityPosts          CommunityPost[]
+  communityPostComments   CommunityPostComment[]
+
+  // Relations
+  neighborhood       Neighborhood?       @relation(fields: [neighborhoodId], references: [id])
+  events             Event[]
+  eventRegistrations EventRegistration[]
+
+  // Marketplace relations
+  marketListings MarketListing[]
+  buyRequests    MarketRequest[]
+  sellerReviews  MarketReview[]  @relation("SellerReviews")
+  buyerReviews   MarketReview[]  @relation("BuyerReviews")
+
+  @@map("users")
+}
+
+model Neighborhood {
+  id                  String   @id @default(uuid())
+  name                String
+  city                String
+  postalCode          String
+  description         String?
+  boundaryCoordinates Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  users          User[]
+  events         Event[]
+  marketListings MarketListing[]
+
+  @@map("neighborhoods")
+}
+
+model Event {
+  id                String        @id @default(uuid())
+  title             String
+  description       String        @db.Text
+  shortDescription  String?       // For previews
+  category          EventCategory
+  startDate         DateTime
+  endDate           DateTime?
+  location          String
+  coordinates       Json?
+  capacity          Int?
+  price             Decimal?      @db.Decimal(10, 2) // For paid events
+  isFree            Boolean       @default(true)
+  tags              String[]      // Array of tags
+  createdBy         String
+  neighborhoodId    String
+  isRecurring       Boolean       @default(false)
+  recurrencePattern Json?
+  status            EventStatus   @default(ACTIVE)
+  imageUrl          String?
+  featured          Boolean       @default(false)
+  requiresApproval  Boolean       @default(false)
+  maxWaitlist       Int?          // Maximum waitlist size
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  creator       User                @relation(fields: [createdBy], references: [id])
+  neighborhood  Neighborhood        @relation(fields: [neighborhoodId], references: [id])
+  registrations EventRegistration[]
+  comments      EventComment[]
+  views         EventView[]
+  images        EventImage[]        // ADD THIS LINE
+
+  @@map("events")
+}
+
+model EventComment {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  content   String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id])
+  parent   EventComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  EventComment[] @relation("CommentReplies")
+
+  @@map("event_comments")
+}
+
+model EventRegistration {
+  id           String             @id @default(uuid())
+  eventId      String
+  userId       String
+  status       RegistrationStatus @default(REGISTERED)
+  registeredAt DateTime           @default(now())
+  notes        String?            @db.Text
+  emergencyContact Json?          // Store emergency contact info
+  position     Int?               // Position in registration/waitlist
+  notified     Boolean            @default(false) // For waitlist notifications
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_registrations")
+}
+
+// Marketplace Models
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  parentId    String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent         Category?       @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories  Category[]      @relation("CategoryHierarchy")
+  marketListings MarketListing[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  marketListings MarketListingTag[]
+
+  @@map("tags")
+}
+
+model MarketListing {
+  id             String        @id @default(uuid())
+  title          String
+  description    String
+  price          Decimal?      @db.Decimal(10, 2)
+  isFree         Boolean       @default(false)
+  condition      ItemCondition
+  status         ListingStatus @default(ACTIVE)
+  sellerId       String
+  categoryId     String
+  neighborhoodId String?
+  images         String[] // Array of image URLs
+  views          Int           @default(0)
+  isPromoted     Boolean       @default(false)
+  promotedUntil  DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  seller       User               @relation(fields: [sellerId], references: [id])
+  category     Category           @relation(fields: [categoryId], references: [id])
+  neighborhood Neighborhood?      @relation(fields: [neighborhoodId], references: [id])
+  requests     MarketRequest[]
+  tags         MarketListingTag[]
+  reviews      MarketReview[]
+
+  @@map("market_listings")
+}
+
+model MarketListingTag {
+  id        String @id @default(uuid())
+  listingId String
+  tagId     String
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tag     Tag           @relation(fields: [tagId], references: [id])
+
+  @@unique([listingId, tagId])
+  @@map("market_listing_tags")
+}
+
+model MarketRequest {
+  id        String        @id @default(uuid())
+  listingId String
+  buyerId   String
+  message   String?
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User          @relation(fields: [buyerId], references: [id])
+
+  @@unique([listingId, buyerId])
+  @@map("market_requests")
+}
+
+model MarketReview {
+  id        String     @id @default(uuid())
+  listingId String
+  sellerId  String
+  buyerId   String
+  rating    Int // 1-5 stars
+  comment   String?
+  type      ReviewType // SELLER or BUYER
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  listing MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  seller  User          @relation("SellerReviews", fields: [sellerId], references: [id])
+  buyer   User          @relation("BuyerReviews", fields: [buyerId], references: [id])
+
+  @@unique([listingId, buyerId])
+  @@map("market_reviews")
+}
+
+model EventView {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String?  // Null for anonymous views
+  viewedAt  DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  duration  Int?     // Time spent viewing in seconds
+  source    String?  // referrer source
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@map("event_views")
+}
+
+model EventImage {
+  id        String   @id @default(uuid())
+  eventId   String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_images")
+}
+
+model CommunityPost {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  content     String
+  category    CommunityPostCategory
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id])
+  comments    CommunityPostComment[]
+  attachments CommunityPostAttachment[]
+}
+
+model CommunityPostComment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id])
+}
+
+model CommunityPostAttachment {
+  id        String   @id @default(uuid())
+  postId    String
+  fileUrl   String
+  fileType  String // 'photo', 'document'
+  createdAt DateTime @default(now())
+
+  // Relations
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+  DRAFT
+  POSTPONED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLIST
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  USED
+  WORN
+}
+
+enum ListingStatus {
+  ACTIVE
+  RESERVED
+  SOLD
+  CLOSED
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum ReviewType {
+  SELLER
+  BUYER
+}
+
+enum EventCategory {
+  SPORTS
+  CULTURAL
+  EDUCATIONAL
+  VOLUNTEER
+  SOCIAL
+  BUSINESS
+  HEALTH
+  ENVIRONMENT
+  TECHNOLOGY
+  MARKET
+  WORKSHOP
+  MEETING
+  CELEBRATION
+  CLEANUP
+  OTHER
+}
+
+enum CommunityPostCategory {
+  SERVICE
+  ISSUE
+  QUESTION
+  ANNOUNCEMENT
+} 

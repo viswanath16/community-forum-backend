@@ -16,8 +16,10 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^6.8.2",
+    "@prisma/client": "^6.9.0",
     "@supabase/supabase-js": "^2.49.8",
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -33,7 +35,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^20",
+    "@types/node": "^20.19.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/swagger-jsdoc": "^6.0.4",
