@@ -39,7 +39,8 @@ export async function GET(
                         id: true,
                         username: true,
                         fullName: true,
-                        avatarUrl: true
+                        avatarUrl: true,
+                        isAdmin: true
                     }
                 },
                 neighborhood: {
@@ -65,7 +66,9 @@ export async function GET(
                 },
                 _count: {
                     select: {
-                        registrations: true
+                        registrations: {
+                            where: { status: 'REGISTERED' }
+                        }
                     }
                 }
             }
@@ -75,11 +78,79 @@ export async function GET(
             return errorResponse('Event not found', 404)
         }
 
-        return successResponse(event)
+        // Transform the event data to match the expected format
+        const formattedEvent = {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            date: event.startDate.toISOString().split('T')[0],
+            time: event.startDate.toTimeString().substring(0, 5),
+            end_time: event.endDate?.toTimeString().substring(0, 5) || null,
+            location: {
+                name: event.location,
+                address: event.location,
+                coordinates: event.coordinates as any || null
+            },
+            category: {
+                id: event.category.toLowerCase().replace('_', '-'),
+                name: event.category.charAt(0) + event.category.slice(1).toLowerCase().replace('_', ' '),
+                color: getCategoryColor(event.category)
+            },
+            organizer: {
+                id: event.creator.id,
+                name: event.creator.fullName || event.creator.username,
+                avatar: event.creator.avatarUrl || null,
+                verified: event.creator.isAdmin
+            },
+            attendees: {
+                current: event._count.registrations,
+                max: event.capacity || null,
+                waiting_list: event.registrations.filter(r => r.status === 'WAITLIST').length
+            },
+            price: {
+                amount: event.price ? Number(event.price) : 0,
+                currency: 'EUR',
+                is_free: event.isFree
+            },
+            images: event.imageUrl ? [{
+                id: 'img_1',
+                url: event.imageUrl,
+                alt: event.title,
+                is_primary: true
+            }] : [],
+            tags: event.tags || [],
+            status: event.status.toLowerCase(),
+            registration_status: event.capacity 
+                ? (event._count.registrations < event.capacity ? 'open' : 'full') 
+                : 'open',
+            created_at: event.createdAt.toISOString(),
+            updated_at: event.updatedAt.toISOString(),
+            is_featured: event.featured,
+            recurring: event.isRecurring ? event.recurrencePattern : null
+        }
+
+        return successResponse(formattedEvent)
 
     } catch (error) {
         return handleApiError(error)
     }
+}
+
+// Helper function to get category color
+function getCategoryColor(category: string): string {
+    const colors: Record<string, string> = {
+        'SPORTS': '#3B82F6',
+        'CULTURAL': '#8B5CF6',
+        'EDUCATIONAL': '#EC4899',
+        'VOLUNTEER': '#10B981',
+        'SOCIAL': '#F59E0B',
+        'BUSINESS': '#6366F1',
+        'HEALTH': '#059669',
+        'ENVIRONMENT': '#10B981',
+        'TECHNOLOGY': '#3B82F6',
+        'OTHER': '#6B7280'
+    }
+    return colors[category] || '#6B7280'
 }
 
 /**
